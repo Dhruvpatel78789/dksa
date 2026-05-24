@@ -28,6 +28,7 @@ type Ingredient = {
 type Product = {
   _id: string;
   name: string;
+  category?: string;
   description: string;
   howToUse: string;
   photos: string[];
@@ -125,6 +126,8 @@ export default function AdminPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([
     { name: "", imageUrl: "", file: null },
   ]);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [promotionMap, setPromotionMap] = useState<Record<string, boolean>>({});
@@ -334,6 +337,51 @@ export default function AdminPage() {
     }
   }
 
+  function startEditingProduct(prod: Product) {
+    setEditingProduct(prod);
+    setProductName(prod.name || "");
+    setProductCategory(prod.category || "");
+    setProductDescription(prod.description || "");
+    setProductHowToUse(prod.howToUse || "");
+    setProductPrice(prod.price ? prod.price.toString() : "");
+    setProductDiscountPercentage(
+      prod.discountPercentage !== undefined
+        ? prod.discountPercentage.toString()
+        : ""
+    );
+    setSizes(
+      prod.sizes && prod.sizes.length > 0
+        ? prod.sizes.map((s) => ({ size: s.size, qty: s.qty.toString() }))
+        : [{ size: "", qty: "" }]
+    );
+    setIngredients(
+      prod.ingredients && prod.ingredients.length > 0
+        ? prod.ingredients.map((i) => ({
+            name: i.name,
+            imageUrl: i.imageUrl,
+            file: null,
+          }))
+        : [{ name: "", imageUrl: "", file: null }]
+    );
+    setExistingPhotos(prod.photos || []);
+    setProductPhotoFiles([]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelEditingProduct() {
+    setEditingProduct(null);
+    setProductName("");
+    setProductCategory("");
+    setProductDescription("");
+    setProductHowToUse("");
+    setProductPrice("");
+    setProductDiscountPercentage("");
+    setSizes([{ size: "", qty: "" }]);
+    setIngredients([{ name: "", imageUrl: "", file: null }]);
+    setExistingPhotos([]);
+    setProductPhotoFiles([]);
+  }
+
   async function submitProduct() {
     if (!productName.trim()) {
       showToast("error", "Product name is required.");
@@ -368,7 +416,8 @@ export default function AdminPage() {
       return;
     }
 
-    if (productPhotoFiles.length === 0) {
+    const totalPhotos = (editingProduct ? existingPhotos.length : 0) + productPhotoFiles.length;
+    if (totalPhotos === 0) {
       showToast("error", "At least one product photo is required.");
       return;
     }
@@ -400,6 +449,10 @@ export default function AdminPage() {
         photoUrls.push(url);
       }
 
+      const finalPhotoUrls = editingProduct
+        ? [...existingPhotos, ...photoUrls]
+        : photoUrls;
+
       const uploadedIngredients = [];
 
       for (const ingredient of ingredients) {
@@ -419,8 +472,13 @@ export default function AdminPage() {
         });
       }
 
-      const res = await fetch("/api/admin/products", {
-        method: "POST",
+      const url = editingProduct
+        ? `/api/admin/products/${editingProduct._id}`
+        : "/api/admin/products";
+      const method = editingProduct ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -429,7 +487,7 @@ export default function AdminPage() {
           category: productCategory,
           description: productDescription,
           howToUse: productHowToUse,
-          photos: photoUrls,
+          photos: finalPhotoUrls,
           price: Number(productPrice),
           discountPercentage: Number(productDiscountPercentage || 0),
           ingredients: uploadedIngredients,
@@ -440,27 +498,55 @@ export default function AdminPage() {
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        showToast("error", data.error || "Failed to add product.");
+        showToast("error", data.error || `Failed to ${editingProduct ? "update" : "add"} product.`);
         return;
       }
 
-      setProductName("");
-      setProductCategory("");
-      setProductDescription("");
-      setProductHowToUse("");
-      setProductPhotoFiles([]);
-      setProductPrice("");
-      setProductDiscountPercentage("");
-      setSizes([{ size: "", qty: "" }]);
-      setIngredients([{ name: "", imageUrl: "", file: null }]);
+      cancelEditingProduct();
 
-      showToast("success", "Product added successfully.");
+      showToast("success", `Product ${editingProduct ? "updated" : "added"} successfully.`);
 
       await loadProducts();
     } catch (error) {
       showToast(
         "error",
-        error instanceof Error ? error.message : "Failed to add product."
+        error instanceof Error ? error.message : `Failed to ${editingProduct ? "update" : "add"} product.`
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function deleteProduct(productId: string) {
+    if (!window.confirm("Are you sure you want to delete this product?")) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const res = await fetch(`/api/admin/products/${productId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        showToast("error", data.error || "Failed to delete product.");
+        return;
+      }
+
+      showToast("success", "Product deleted successfully.");
+
+      if (editingProduct && editingProduct._id === productId) {
+        cancelEditingProduct();
+      }
+
+      await loadProducts();
+    } catch (error) {
+      showToast(
+        "error",
+        error instanceof Error ? error.message : "Failed to delete product."
       );
     } finally {
       setIsSaving(false);
@@ -909,8 +995,24 @@ export default function AdminPage() {
           )}
 
           {activeTab === "product" && (
-            <section style={cardStyle}>
-              <h2 style={{ marginTop: 0 }}>Add Product</h2>
+            <>
+              <section style={cardStyle}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 0, marginBottom: "20px" }}>
+                <h2 style={{ margin: 0 }}>
+                  {editingProduct ? `Edit Product: ${editingProduct.name}` : "Add Product"}
+                </h2>
+                {editingProduct && (
+                  <button
+                    onClick={cancelEditingProduct}
+                    style={{
+                      ...smallButtonStyle,
+                      backgroundColor: "#6B705C",
+                    }}
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
 
               <div style={formGridStyle}>
                 <div>
@@ -944,6 +1046,65 @@ export default function AdminPage() {
                     }}
                     style={inputStyle}
                   />
+                  {editingProduct && existingPhotos.length > 0 && (
+                    <div style={{ marginTop: "14px" }}>
+                      <p style={{ margin: "0 0 8px", fontSize: "13px", fontWeight: 700, color: "#3A5A40" }}>
+                        Existing Photos (Hover & Click &times; to Remove):
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        {existingPhotos.map((photo, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              position: "relative",
+                              width: "60px",
+                              height: "60px",
+                              borderRadius: "8px",
+                              overflow: "hidden",
+                              cursor: "pointer",
+                              border: "1px solid #D8CDC2",
+                            }}
+                            onClick={() => {
+                              setExistingPhotos(prev => prev.filter((_, i) => i !== idx));
+                            }}
+                            title="Remove photo"
+                          >
+                            <img
+                              src={photo}
+                              alt="product thumbnail"
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                height: "100%",
+                                backgroundColor: "rgba(155, 44, 44, 0.7)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "white",
+                                opacity: 0,
+                                transition: "opacity 0.2s ease",
+                                fontWeight: "bold",
+                                fontSize: "20px",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.opacity = "1";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.opacity = "0";
+                              }}
+                            >
+                              &times;
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1136,9 +1297,73 @@ export default function AdminPage() {
                 disabled={isSaving}
                 style={primaryButtonStyle(isSaving)}
               >
-                {isSaving ? "Saving Product..." : "Add Product"}
+                {isSaving ? "Saving Product..." : editingProduct ? "Update Product" : "Add Product"}
               </button>
             </section>
+
+            <section style={{ ...cardStyle, marginTop: "32px" }}>
+              <div style={topRowStyle}>
+                <div>
+                  <h2 style={{ margin: 0 }}>Existing Products</h2>
+                  <p style={{ margin: "6px 0 0", color: "#6B705C" }}>
+                    Manage and edit details or remove products from the store.
+                  </p>
+                </div>
+              </div>
+
+              {isLoadingProducts ? (
+                <p>Loading products...</p>
+              ) : products.length === 0 ? (
+                <p>No products found.</p>
+              ) : (
+                <div style={cardGridStyle}>
+                  {products.map((item) => {
+                    const image = item.photos?.[0] || "";
+                    return (
+                      <article key={item._id} style={miniCardStyle}>
+                        {image && (
+                          <img
+                            src={image}
+                            alt={item.name}
+                            style={productImageStyle}
+                          />
+                        )}
+
+                        <h3 style={{ margin: "0 0 8px" }}>{item.name}</h3>
+                        <p style={mutedParagraphStyle}>{item.category || "No category"}</p>
+                        <p style={{ margin: "0 0 14px", fontWeight: 700 }}>
+                          ₹{item.price} {item.discountPercentage ? `(-${item.discountPercentage}%)` : ""}
+                        </p>
+
+                        <div style={{ display: "flex", gap: "10px", marginTop: "14px" }}>
+                          <button
+                            onClick={() => startEditingProduct(item)}
+                            style={{
+                              ...smallButtonStyle,
+                              flex: 1,
+                              backgroundColor: "#FFE5D4",
+                              color: "#2F3E2F",
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteProduct(item._id)}
+                            style={{
+                              ...dangerButtonStyle,
+                              flex: 1,
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </>
           )}
 
           {activeTab === "promotion" && (

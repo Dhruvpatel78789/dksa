@@ -47,7 +47,7 @@ export default function FloatingActions() {
   return (
     <>
       {/* DESKTOP */}
-      <div className="floating-desktop-left">
+      <div className="hidden md:flex fixed top-[22px] left-[22px] z-[9999] gap-3">
         <button onClick={() => router.back()} style={iconStyle}>
           ←
         </button>
@@ -67,7 +67,7 @@ export default function FloatingActions() {
         )}
       </div>
 
-      <div className="floating-desktop-right">
+      <div className="hidden md:flex fixed top-[22px] right-[22px] z-[9999] gap-3">
         {pathname !== "/collections" && (
           <Link href="/collections" style={iconStyle}>
             🛍️
@@ -87,14 +87,16 @@ export default function FloatingActions() {
           </Link>
         )}
       </div>
-{/* MOBILE LEFT BACK */}
-<div className="floating-mobile-left">
-  <button onClick={() => router.back()} style={iconStyle}>
-    ←
-  </button>
-</div>
+
+      {/* MOBILE LEFT BACK */}
+      <div className="flex md:hidden fixed top-[18px] left-[18px] z-[9999]">
+        <button onClick={() => router.back()} style={iconStyle}>
+          ←
+        </button>
+      </div>
+
       {/* MOBILE */}
-      <div className="floating-mobile">
+      <div className="flex md:hidden fixed top-[18px] right-[18px] z-[9999] flex-col items-end gap-2.5">
         <button
           onClick={() => setOpen((prev) => !prev)}
           style={{
@@ -109,9 +111,7 @@ export default function FloatingActions() {
         </button>
 
         {open && (
-          <div className="floating-mobile-menu">
-            
-
+          <div className="flex flex-col gap-2.5 p-2.5 rounded-[24px] bg-white/72 backdrop-blur-[16px] shadow-[0_14px_34px_rgba(0,0,0,0.12)]">
             {pathname !== "/" && (
               <Link
                 href="/"
@@ -160,68 +160,6 @@ export default function FloatingActions() {
           </div>
         )}
       </div>
-
-      <style jsx>{`
-        .floating-desktop-left {
-          position: fixed;
-          top: 22px;
-          left: 22px;
-          z-index: 9999;
-          display: flex;
-          gap: 12px;
-        }
-
-        .floating-desktop-right {
-          position: fixed;
-          top: 22px;
-          right: 22px;
-          z-index: 9999;
-          display: flex;
-          gap: 12px;
-        }
-
-        .floating-mobile,
-        .floating-mobile-left {
-        display: none;
-        }
-
-        @media (max-width: 760px) {
-          .floating-desktop-left,
-          .floating-desktop-right {
-            display: none;
-          }
-
-          .floating-mobile-left {
-            position: fixed;
-            top: 18px;
-            left: 18px;
-            z-index: 9999;
-            display: flex;
-            }
-
-          .floating-mobile {
-            position: fixed;
-            top: 18px;
-            right: 18px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 10px;
-          }
-
-          .floating-mobile-menu {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            padding: 10px;
-            border-radius: 999px;
-            background: rgba(255, 255, 255, 0.72);
-            backdrop-filter: blur(16px);
-            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
-          }
-        }
-      `}</style>
     </>
   );
 }

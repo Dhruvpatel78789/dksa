@@ -65,7 +65,9 @@ export default function Home() {
     null
   );
 
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobileRaw, setIsMobileRaw] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const isMobile = mounted ? isMobileRaw : false;
 
   const [foundationProgress, setFoundationProgress] = useState<number>(0);
   const [productProgress, setProductProgress] = useState<number>(0);
@@ -189,8 +191,9 @@ export default function Home() {
   const frameSrc = `/frames/frame_${paddedFrame}.png`;
 
 useEffect(() => {
+  setMounted(true);
   function handleResize() {
-    setIsMobile(window.innerWidth < 768);
+    setIsMobileRaw(window.innerWidth < 768);
   }
 
   handleResize();
@@ -223,6 +226,20 @@ function FooterLink({ text }: { text: string }) {
     </p>
   );
 }
+
+  if (!mounted) {
+    return (
+      <main
+        style={{
+          margin: 0,
+          padding: 0,
+          width: "100%",
+          minHeight: "100vh",
+          backgroundColor: "#FFE5D4",
+        }}
+      />
+    );
+  }
 
   return (
     <main
