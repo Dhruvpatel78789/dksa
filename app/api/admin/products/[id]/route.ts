@@ -115,12 +115,26 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     if (body.sizes !== undefined) {
-      updateData.sizes = Array.isArray(body.sizes)
-        ? body.sizes.map((item: any) => ({
-            size: String(item.size || "").trim(),
-            qty: Number(item.qty || 0),
-          }))
-        : [];
+      const parsedSizes = Array.isArray(body.sizes) ? body.sizes : [];
+      const cleanSizes = parsedSizes.map((item: any) => ({
+        size: String(item.size || "").trim(),
+        qty: Number(item.qty || 0),
+        price: Number(item.price || 0),
+      }));
+
+      const hasInvalidSize = cleanSizes.some(
+        (item: { size: string; qty: number; price: number }) =>
+          !item.size || Number.isNaN(item.qty) || item.qty < 0 || Number.isNaN(item.price) || item.price <= 0
+      );
+
+      if (hasInvalidSize) {
+        return Response.json(
+          { error: "Each size must have valid size, quantity, and price" },
+          { status: 400 }
+        );
+      }
+
+      updateData.sizes = cleanSizes;
     }
 
     if (body.isPromoted !== undefined) {

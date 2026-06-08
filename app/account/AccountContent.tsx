@@ -30,69 +30,155 @@ type Order = {
 };
 
 export default function AccountContent() {
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot" | "reset">("login");
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
   const isAdminLogin = next === "/admin";
+  
+  const modeParam = searchParams.get("mode");
+  const tokenParam = searchParams.get("token");
+  const emailParam = searchParams.get("email");
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
   const [user, setUser] = useState<any>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-  async function loadUser() {
-  try {
-    const res = await fetch("/api/auth/me", {
-      cache: "no-store",
-    });
-
-    const data = await res.json();
-
-    if (isAdminLogin && data.user && data.user.role !== "admin") {
-      await fetch("/api/auth/logout", {
-        method: "POST",
+  async function loadOrders() {
+    try {
+      const res = await fetch("/api/orders", {
+        cache: "no-store",
       });
 
-      setUser(null);
-      setOrders([]);
-      return;
+      const data = await res.json();
+
+      if (res.ok) {
+        setOrders(data.orders || []);
+      }
+    } catch (error) {
+      console.error(error);
     }
-
-    setUser(data.user || null);
-  } catch (error) {
-    console.error(error);
   }
-}
-  async function loadOrders() {
-  try {
-    const res = await fetch("/api/orders", {
-      cache: "no-store",
-    });
 
-    const data = await res.json();
+  async function checkAuthAndLoad() {
+    try {
+      const res = await fetch("/api/auth/me", {
+        cache: "no-store",
+      });
 
-    if (res.ok) {
-      setOrders(data.orders || []);
+      const data = await res.json();
+
+      if (data.user) {
+        if (data.user.role === "admin") {
+          router.replace("/admin");
+          return;
+        }
+
+        if (isAdminLogin && data.user.role !== "admin") {
+          await fetch("/api/auth/logout", {
+            method: "POST",
+          });
+          setUser(null);
+          setOrders([]);
+          setCheckingAuth(false);
+          return;
+        }
+
+        setUser(data.user);
+        await loadOrders();
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setCheckingAuth(false);
     }
-  } catch (error) {
-    console.error(error);
   }
-}
 
   useEffect(() => {
-    loadUser();
-    loadOrders();
-  }, []);
+    if (modeParam === "reset" && tokenParam && emailParam) {
+      setMode("reset");
+      setEmail(emailParam);
+      setCheckingAuth(false);
+    } else {
+      checkAuthAndLoad();
+    }
+  }, [modeParam, tokenParam, emailParam]);
 
   async function handleSubmit() {
     try {
       setLoading(true);
       setMessage("");
+
+      if (mode === "forgot") {
+        if (!email.trim()) {
+          setMessage("Email is required");
+          return;
+        }
+
+        const res = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          setMessage(data.error || "Failed to send reset link");
+          return;
+        }
+
+        setMessage(data.message || "Reset link sent successfully");
+        setEmail("");
+        return;
+      }
+
+      if (mode === "reset") {
+        if (!password) {
+          setMessage("Password is required");
+          return;
+        }
+        if (password !== confirmPassword) {
+          setMessage("Passwords do not match");
+          return;
+        }
+
+        const res = await fetch("/api/auth/reset-password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            token: tokenParam,
+            password,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          setMessage(data.error || "Failed to reset password");
+          return;
+        }
+
+        setMessage("Password reset successfully. You can now login.");
+        setMode("login");
+        setPassword("");
+        setConfirmPassword("");
+        router.replace("/account");
+        return;
+      }
 
       const endpoint =
         mode === "login"
@@ -118,38 +204,43 @@ export default function AccountContent() {
         return;
       }
 
-        await loadUser();
-        await loadOrders();
-
-        const meRes = await fetch("/api/auth/me", {
+      const meRes = await fetch("/api/auth/me", {
         cache: "no-store",
-        });
+      });
 
-        const meData = await meRes.json();
+      const meData = await meRes.json();
+      const loggedInUser = meData.user;
 
-        if (isAdminLogin) {
-        if (meData.user?.role === "admin") {
-            router.push("/admin");
+      if (isAdminLogin) {
+        if (loggedInUser?.role === "admin") {
+          setCheckingAuth(true);
+          router.replace("/admin");
+          return;
         } else {
-            setMessage("This login is not an admin account.");
-            await fetch("/api/auth/logout", {
+          setMessage("This login is not an admin account.");
+          await fetch("/api/auth/logout", {
             method: "POST",
-            });
-            setUser(null);
-            setOrders([]);
-        }
-
-        return;
-        }
-
-        if (next) {
-          router.push(next);
+          });
+          setUser(null);
+          setOrders([]);
           return;
         }
+      }
 
-        if (meData.user?.role === "admin") {
-          router.push("/admin");
-        }
+      if (loggedInUser?.role === "admin") {
+        setCheckingAuth(true);
+        router.replace("/admin");
+        return;
+      }
+
+      if (next) {
+        setCheckingAuth(true);
+        router.replace(next);
+        return;
+      }
+
+      setUser(loggedInUser);
+      await loadOrders();
         
       setName("");
       setEmail("");
@@ -179,6 +270,27 @@ export default function AccountContent() {
     } catch (error) {
       console.error(error);
     }
+  }
+
+  if (checkingAuth) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "#F7EFE7",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "Arial, sans-serif",
+          color: "#111",
+        }}
+      >
+        <FloatingActions />
+        <div style={{ textAlign: "center" }}>
+          <p style={{ fontSize: "18px", fontWeight: "bold" }}>Loading account...</p>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -219,7 +331,11 @@ export default function AccountContent() {
             ? "welcome"
             : mode === "login"
             ? "login"
-            : "signup"}
+            : mode === "signup"
+            ? "signup"
+            : mode === "forgot"
+            ? "reset password"
+            : "new password"}
         </h1>
 
         {user ? (
@@ -370,33 +486,130 @@ export default function AccountContent() {
               {mode === "signup" && (
                 <input
                   value={name}
-                  onChange={(e) =>
-                    setName(e.target.value)
-                  }
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="Your name"
                   style={inputStyle}
                 />
               )}
 
-              <input
-                value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
-                placeholder="Email address"
-                type="email"
-                style={inputStyle}
-              />
+              {(mode === "signup" || mode === "login" || mode === "forgot") && (
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email address"
+                  type="email"
+                  style={inputStyle}
+                />
+              )}
 
-              <input
-                value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                placeholder="Password"
-                type="password"
-                style={inputStyle}
-              />
+              {(mode === "signup" || mode === "login" || mode === "reset") && (
+                <div style={{ position: "relative", width: "100%" }}>
+                  <input
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={mode === "reset" ? "New password" : "Password"}
+                    type={showPassword ? "text" : "password"}
+                    style={{ ...inputStyle, paddingRight: "48px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: "absolute",
+                      right: "18px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#111",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 0,
+                      opacity: 0.6,
+                    }}
+                  >
+                    {showPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {mode === "reset" && (
+                <div style={{ position: "relative", width: "100%" }}>
+                  <input
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    style={{ ...inputStyle, paddingRight: "48px" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={{
+                      position: "absolute",
+                      right: "18px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#111",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 0,
+                      opacity: 0.6,
+                    }}
+                  >
+                    {showConfirmPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {mode === "login" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("forgot");
+                    setMessage("");
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#FFE5D4",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: "14px",
+                    textAlign: "right",
+                    padding: 0,
+                    marginTop: "-4px",
+                  }}
+                >
+                  Forgot Password?
+                </button>
+              )}
 
               <button
                 onClick={handleSubmit}
@@ -407,7 +620,11 @@ export default function AccountContent() {
                   ? "Please wait..."
                   : mode === "login"
                   ? "Login"
-                  : "Create Account"}
+                  : mode === "signup"
+                  ? "Create Account"
+                  : mode === "forgot"
+                  ? "Send Reset Link"
+                  : "Reset Password"}
               </button>
             </div>
 
@@ -422,29 +639,51 @@ export default function AccountContent() {
               </p>
             )}
 
-            <button
-              onClick={() => {
-                setMode(
-                  mode === "login"
-                    ? "signup"
-                    : "login"
-                );
-
-                setMessage("");
-              }}
-              style={{
-                marginTop: 24,
-                background: "transparent",
-                border: "none",
-                color: "#FFE5D4",
-                cursor: "pointer",
-                fontWeight: 900,
-              }}
-            >
-              {mode === "login"
-                ? "Don't have an account? Signup"
-                : "Already have an account? Login"}
-            </button>
+            {(mode === "login" || mode === "signup") ? (
+              <button
+                onClick={() => {
+                  setMode(
+                    mode === "login"
+                      ? "signup"
+                      : "login"
+                  );
+                  setMessage("");
+                }}
+                style={{
+                  marginTop: 24,
+                  background: "transparent",
+                  border: "none",
+                  color: "#FFE5D4",
+                  cursor: "pointer",
+                  fontWeight: 900,
+                  width: "100%",
+                  textAlign: "center",
+                }}
+              >
+                {mode === "login"
+                  ? "Don't have an account? Signup"
+                  : "Already have an account? Login"}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setMode("login");
+                  setMessage("");
+                }}
+                style={{
+                  marginTop: 24,
+                  background: "transparent",
+                  border: "none",
+                  color: "#FFE5D4",
+                  cursor: "pointer",
+                  fontWeight: 900,
+                  width: "100%",
+                  textAlign: "center",
+                }}
+              >
+                Back to Login
+              </button>
+            )}
           </>
         )}
       </section>

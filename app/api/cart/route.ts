@@ -102,14 +102,29 @@ export async function POST(request: Request) {
       (item) => item.productId === productId && item.size === size
     );
 
+    const selectedSizeObj = product.sizes?.find((s: any) => s.size === size);
+    const targetQuantity = existingIndex >= 0 ? items[existingIndex].quantity + quantity : quantity;
+    
+    if (selectedSizeObj && selectedSizeObj.qty < targetQuantity) {
+      return Response.json(
+        { error: `Insufficient stock. Only ${selectedSizeObj.qty} items left for size ${size}.` },
+        { status: 400 }
+      );
+    }
+
+    const itemPrice = selectedSizeObj && selectedSizeObj.price !== undefined
+      ? Number(selectedSizeObj.price)
+      : Number(product.price || 0);
+
     if (existingIndex >= 0) {
-      items[existingIndex].quantity += quantity;
+      items[existingIndex].quantity = targetQuantity;
+      items[existingIndex].price = itemPrice;
     } else {
       items.push({
         productId,
         name: String(product.name || ""),
         photo: product.photos?.[0] || "",
-        price: Number(product.price || 0),
+        price: itemPrice,
         discountPercentage: Number(product.discountPercentage || 0),
         quantity,
         size,

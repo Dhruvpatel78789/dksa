@@ -1,4 +1,5 @@
 import clientPromise from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 
 export async function POST(request: Request) {
   try {
@@ -40,6 +41,21 @@ export async function POST(request: Request) {
           },
         }
       );
+
+      // Decrement matched product size inventory for each ordered item
+      for (const item of order.items || []) {
+        if (item.size && ObjectId.isValid(item.productId)) {
+          await db.collection("products").updateOne(
+            {
+              _id: new ObjectId(item.productId),
+              "sizes.size": item.size
+            },
+            {
+              $inc: { "sizes.$.qty": -item.quantity }
+            }
+          );
+        }
+      }
 
       await db.collection("carts").updateOne(
         { userId: order.userId },

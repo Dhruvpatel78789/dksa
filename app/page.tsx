@@ -5,7 +5,7 @@ import { getOptimizedMediaUrl } from "@/lib/media";
 import Link from "next/link";
 import FloatingActions from "./components/FloatingActions";
 
-const FRAME_COUNT = 299;
+const FRAME_COUNT = 239;
 
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(Math.max(value, min), max);

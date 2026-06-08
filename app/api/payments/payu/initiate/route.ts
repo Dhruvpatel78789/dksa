@@ -77,6 +77,32 @@ export async function POST(request: Request) {
       return Response.json({ error: "Cart is empty" }, { status: 400 });
     }
 
+    // Validate stock availability for each item in the cart before initiating payment
+    for (const item of items) {
+      if (!ObjectId.isValid(item.productId)) {
+        return Response.json({ error: `Invalid product id for ${item.name}` }, { status: 400 });
+      }
+      const dbProduct = await db.collection("products").findOne({
+        _id: new ObjectId(item.productId),
+      });
+      if (!dbProduct) {
+        return Response.json({ error: `Product ${item.name} not found` }, { status: 400 });
+      }
+      const sizeObj = dbProduct.sizes?.find((s: any) => s.size === item.size);
+      if (!sizeObj) {
+        return Response.json(
+          { error: `Size ${item.size} not found for product ${item.name}` },
+          { status: 400 }
+        );
+      }
+      if (sizeObj.qty < item.quantity) {
+        return Response.json(
+          { error: `Insufficient stock for ${item.name} (Size: ${item.size}). Only ${sizeObj.qty} items left.` },
+          { status: 400 }
+        );
+      }
+    }
+
     const subtotal = items.reduce((sum: number, item: any) => {
       const discountedPrice =
         item.price - (item.price * (item.discountPercentage || 0)) / 100;

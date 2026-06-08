@@ -17,6 +17,7 @@ type Review = {
 type ProductSize = {
   size: string;
   qty: string;
+  price: string;
 };
 
 type Ingredient = {
@@ -41,6 +42,7 @@ type Product = {
   sizes: {
     size: string;
     qty: number;
+    price?: number;
   }[];
   isPromoted?: boolean;
   promoDescription?: string;
@@ -122,7 +124,7 @@ export default function AdminPage() {
   const [productPrice, setProductPrice] = useState("");
   const [productDiscountPercentage, setProductDiscountPercentage] =
     useState("");
-  const [sizes, setSizes] = useState<ProductSize[]>([{ size: "", qty: "" }]);
+  const [sizes, setSizes] = useState<ProductSize[]>([{ size: "", qty: "", price: "" }]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([
     { name: "", imageUrl: "", file: null },
   ]);
@@ -260,6 +262,22 @@ export default function AdminPage() {
     loadOrders();
   }, []);
 
+  async function handleLogout() {
+    try {
+      const res = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        window.location.href = "/account";
+      } else {
+        showToast("error", "Failed to log out.");
+      }
+    } catch (error) {
+      showToast("error", "Something went wrong during logout.");
+    }
+  }
+
   const selectedCount = useMemo(() => {
     return Object.values(selectedMap).filter(Boolean).length;
   }, [selectedMap]);
@@ -351,8 +369,12 @@ export default function AdminPage() {
     );
     setSizes(
       prod.sizes && prod.sizes.length > 0
-        ? prod.sizes.map((s) => ({ size: s.size, qty: s.qty.toString() }))
-        : [{ size: "", qty: "" }]
+        ? prod.sizes.map((s) => ({
+            size: s.size,
+            qty: s.qty.toString(),
+            price: s.price !== undefined ? s.price.toString() : "",
+          }))
+        : [{ size: "", qty: "", price: "" }]
     );
     setIngredients(
       prod.ingredients && prod.ingredients.length > 0
@@ -376,7 +398,7 @@ export default function AdminPage() {
     setProductHowToUse("");
     setProductPrice("");
     setProductDiscountPercentage("");
-    setSizes([{ size: "", qty: "" }]);
+    setSizes([{ size: "", qty: "", price: "" }]);
     setIngredients([{ name: "", imageUrl: "", file: null }]);
     setExistingPhotos([]);
     setProductPhotoFiles([]);
@@ -426,6 +448,7 @@ export default function AdminPage() {
       .map((item) => ({
         size: item.size.trim(),
         qty: Number(item.qty),
+        price: Number(item.price),
       }))
       .filter((item) => item.size);
 
@@ -434,8 +457,8 @@ export default function AdminPage() {
       return;
     }
 
-    if (cleanSizes.some((item) => Number.isNaN(item.qty) || item.qty < 0)) {
-      showToast("error", "Each size must have valid quantity.");
+    if (cleanSizes.some((item) => Number.isNaN(item.qty) || item.qty < 0 || Number.isNaN(item.price) || item.price <= 0)) {
+      showToast("error", "Each size must have valid quantity and price.");
       return;
     }
 
@@ -865,6 +888,32 @@ export default function AdminPage() {
             </button>
           ))}
         </nav>
+
+        <button
+          onClick={handleLogout}
+          style={{
+            width: "100%",
+            marginTop: "32px",
+            padding: "14px 16px",
+            borderRadius: "16px",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "left",
+            backgroundColor: "rgba(239, 68, 68, 0.15)",
+            color: "#FCA5A5",
+            fontWeight: 800,
+            fontSize: "15px",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.25)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "rgba(239, 68, 68, 0.15)";
+          }}
+        >
+          Logout
+        </button>
       </aside>
 
       <section style={{ padding: "40px" }}>
@@ -1165,7 +1214,7 @@ export default function AdminPage() {
                   <h3 style={{ margin: 0 }}>Available Sizes</h3>
                   <button
                     onClick={() =>
-                      setSizes((prev) => [...prev, { size: "", qty: "" }])
+                      setSizes((prev) => [...prev, { size: "", qty: "", price: "" }])
                     }
                     style={smallButtonStyle}
                   >
@@ -1205,6 +1254,23 @@ export default function AdminPage() {
                           );
                         }}
                         placeholder="Qty"
+                        type="number"
+                        style={inputStyle}
+                      />
+
+                      <input
+                        value={item.price}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSizes((prev) =>
+                            prev.map((sizeItem, sizeIndex) =>
+                              sizeIndex === index
+                                ? { ...sizeItem, price: value }
+                                : sizeItem
+                            )
+                          );
+                        }}
+                        placeholder="Price (₹)"
                         type="number"
                         style={inputStyle}
                       />
@@ -2061,7 +2127,7 @@ const sectionHeaderStyle: React.CSSProperties = {
 
 const rowGridStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1fr 160px 110px",
+  gridTemplateColumns: "1fr 120px 120px 110px",
   gap: "12px",
 };
 

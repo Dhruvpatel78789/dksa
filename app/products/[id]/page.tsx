@@ -21,6 +21,7 @@ type Product = {
   sizes?: {
     size: string;
     qty: number;
+    price?: number;
   }[];
 };
 
@@ -131,7 +132,8 @@ export default function ProductPage() {
   }, [id]);
 
   const pricing = useMemo(() => {
-    const price = product?.price || 0;
+    const sizeObj = product?.sizes?.find(s => s.size === selectedSize);
+    const price = sizeObj && sizeObj.price !== undefined ? sizeObj.price : (product?.price || 0);
     const discount = product?.discountPercentage || 0;
     const discountedPrice = price - (price * discount) / 100;
 
@@ -140,7 +142,7 @@ export default function ProductPage() {
       discount,
       discountedPrice,
     };
-  }, [product]);
+  }, [product, selectedSize]);
 
   if (loading) {
     return (
@@ -451,25 +453,36 @@ export default function ProductPage() {
               </div>
             </div>
 
-            <button
-              onClick={addToCart}
-              style={{
-                width: "100%",
-                marginTop: 34,
-                padding: "18px 24px",
-                borderRadius: 999,
-                border: "none",
-                backgroundColor: "#FFE5D4",
-                color: "#111",
-                fontWeight: 900,
-                fontSize: 16,
-                cursor: "pointer",
-                transform: added ? "scale(0.96)" : "scale(1)",
-                transition: "all 220ms ease",
-              }}
-            >
-              {added ? "Added ✓" : "Add To Cart"}
-            </button>
+            {(() => {
+              const selectedSizeObj = product.sizes?.find(s => s.size === selectedSize);
+              const isSoldOut = selectedSizeObj
+                ? selectedSizeObj.qty <= 0
+                : (product.sizes && product.sizes.length > 0 ? product.sizes.every(s => s.qty <= 0) : true);
+
+              return (
+                <button
+                  onClick={addToCart}
+                  disabled={isSoldOut || added}
+                  style={{
+                    width: "100%",
+                    marginTop: 34,
+                    padding: "18px 24px",
+                    borderRadius: 999,
+                    border: "none",
+                    backgroundColor: isSoldOut ? "#6B705C" : "#FFE5D4",
+                    color: isSoldOut ? "#FAF7F2" : "#111",
+                    fontWeight: 900,
+                    fontSize: 16,
+                    cursor: isSoldOut ? "not-allowed" : "pointer",
+                    transform: added ? "scale(0.96)" : "scale(1)",
+                    transition: "all 220ms ease",
+                    opacity: isSoldOut ? 0.65 : 1,
+                  }}
+                >
+                  {isSoldOut ? "Sold Out" : added ? "Added ✓" : "Add To Cart"}
+                </button>
+              );
+            })()}
           </aside>
         </section>
 
