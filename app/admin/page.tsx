@@ -122,8 +122,7 @@ export default function AdminPage() {
   const [productHowToUse, setProductHowToUse] = useState("");
   const [productPhotoFiles, setProductPhotoFiles] = useState<File[]>([]);
   const [productPrice, setProductPrice] = useState("");
-  const [productDiscountPercentage, setProductDiscountPercentage] =
-    useState("");
+  const [productDiscountedPrice, setProductDiscountedPrice] = useState("");
   const [sizes, setSizes] = useState<ProductSize[]>([{ size: "", qty: "", price: "" }]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([
     { name: "", imageUrl: "", file: null },
@@ -362,11 +361,12 @@ export default function AdminPage() {
     setProductDescription(prod.description || "");
     setProductHowToUse(prod.howToUse || "");
     setProductPrice(prod.price ? prod.price.toString() : "");
-    setProductDiscountPercentage(
-      prod.discountPercentage !== undefined
-        ? prod.discountPercentage.toString()
-        : ""
-    );
+    if (prod.price && prod.discountPercentage !== undefined) {
+      const disc = prod.price - (prod.price * prod.discountPercentage) / 100;
+      setProductDiscountedPrice(Math.round(disc).toString());
+    } else {
+      setProductDiscountedPrice(prod.price ? prod.price.toString() : "");
+    }
     setSizes(
       prod.sizes && prod.sizes.length > 0
         ? prod.sizes.map((s) => ({
@@ -397,7 +397,7 @@ export default function AdminPage() {
     setProductDescription("");
     setProductHowToUse("");
     setProductPrice("");
-    setProductDiscountPercentage("");
+    setProductDiscountedPrice("");
     setSizes([{ size: "", qty: "", price: "" }]);
     setIngredients([{ name: "", imageUrl: "", file: null }]);
     setExistingPhotos([]);
@@ -429,14 +429,15 @@ export default function AdminPage() {
       return;
     }
 
-    if (
-      productDiscountPercentage &&
-      (Number(productDiscountPercentage) < 0 ||
-        Number(productDiscountPercentage) > 100)
-    ) {
-      showToast("error", "Discount must be between 0 and 100.");
+    const origPrice = Number(productPrice);
+    const discPrice = productDiscountedPrice ? Number(productDiscountedPrice) : origPrice;
+
+    if (Number.isNaN(discPrice) || discPrice <= 0 || discPrice > origPrice) {
+      showToast("error", "Discounted price must be greater than 0 and less than or equal to the original price.");
       return;
     }
+
+    const calculatedDiscount = Math.round(((origPrice - discPrice) / origPrice) * 100);
 
     const totalPhotos = (editingProduct ? existingPhotos.length : 0) + productPhotoFiles.length;
     if (totalPhotos === 0) {
@@ -511,8 +512,8 @@ export default function AdminPage() {
           description: productDescription,
           howToUse: productHowToUse,
           photos: finalPhotoUrls,
-          price: Number(productPrice),
-          discountPercentage: Number(productDiscountPercentage || 0),
+          price: origPrice,
+          discountPercentage: calculatedDiscount,
           ingredients: uploadedIngredients,
           sizes: cleanSizes,
         }),
@@ -1157,7 +1158,7 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <label style={labelStyle}>Price</label>
+                  <label style={labelStyle}>Original Price (₹)</label>
                   <input
                     value={productPrice || ""}
                     onChange={(e) => setProductPrice(e.target.value)}
@@ -1168,13 +1169,13 @@ export default function AdminPage() {
                 </div>
 
                 <div>
-                  <label style={labelStyle}>Discount %</label>
+                  <label style={labelStyle}>Discounted Price (₹)</label>
                   <input
-                    value={productDiscountPercentage || ""}
+                    value={productDiscountedPrice || ""}
                     onChange={(e) =>
-                      setProductDiscountPercentage(e.target.value)
+                      setProductDiscountedPrice(e.target.value)
                     }
-                    placeholder="10"
+                    placeholder="1169"
                     type="number"
                     style={inputStyle}
                   />
@@ -1258,22 +1259,29 @@ export default function AdminPage() {
                         style={inputStyle}
                       />
 
-                      <input
-                        value={item.price}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setSizes((prev) =>
-                            prev.map((sizeItem, sizeIndex) =>
-                              sizeIndex === index
-                                ? { ...sizeItem, price: value }
-                                : sizeItem
-                            )
-                          );
-                        }}
-                        placeholder="Price (₹)"
-                        type="number"
-                        style={inputStyle}
-                      />
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <input
+                          value={item.price}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setSizes((prev) =>
+                              prev.map((sizeItem, sizeIndex) =>
+                                sizeIndex === index
+                                  ? { ...sizeItem, price: value }
+                                  : sizeItem
+                              )
+                            );
+                          }}
+                          placeholder="Orig. Price (₹)"
+                          type="number"
+                          style={inputStyle}
+                        />
+                        {Number(item.price) > 0 && (
+                          <span style={{ fontSize: "12px", color: "#6B705C" }}>
+                            Discounted: ₹{Math.round(Number(item.price) * (1 - (Math.round(((Number(productPrice) - Number(productDiscountedPrice || productPrice)) / (Number(productPrice) || 1)) * 100) || 0) / 100))}
+                          </span>
+                        )}
+                      </div>
 
                       <button
                         onClick={() => {
@@ -1398,7 +1406,18 @@ export default function AdminPage() {
                         <h3 style={{ margin: "0 0 8px" }}>{item.name}</h3>
                         <p style={mutedParagraphStyle}>{item.category || "No category"}</p>
                         <p style={{ margin: "0 0 14px", fontWeight: 700 }}>
-                          ₹{item.price} {item.discountPercentage ? `(-${item.discountPercentage}%)` : ""}
+                          {item.discountPercentage ? (
+                            <>
+                              <span style={{ textDecoration: "line-through", color: "#8B6F47", marginRight: "8px", fontSize: "14px" }}>
+                                ₹{item.price || 0}
+                              </span>
+                              <span style={{ color: "#2F3E2F" }}>
+                                ₹{Math.round((item.price || 0) - ((item.price || 0) * item.discountPercentage) / 100)}
+                              </span>
+                            </>
+                          ) : (
+                            <span>₹{item.price || 0}</span>
+                          )}
                         </p>
 
                         <div style={{ display: "flex", gap: "10px", marginTop: "14px" }}>
@@ -1627,9 +1646,20 @@ export default function AdminPage() {
                             />
 
                             <strong>{item.name}</strong>
-                            <p style={mutedParagraphStyle}>
-                              ₹{item.price || 0}
-                            </p>
+                             <p style={mutedParagraphStyle}>
+                               {item.discountPercentage ? (
+                                 <>
+                                   <span style={{ textDecoration: "line-through", color: "#8B6F47", marginRight: "8px", fontSize: "13px" }}>
+                                     ₹{item.price || 0}
+                                   </span>
+                                   <span>
+                                     ₹{Math.round((item.price || 0) - ((item.price || 0) * item.discountPercentage) / 100)}
+                                   </span>
+                                 </>
+                               ) : (
+                                 <span>₹{item.price || 0}</span>
+                               )}
+                             </p>
                           </label>
                         );
                       })}

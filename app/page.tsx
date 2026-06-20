@@ -80,7 +80,8 @@ export default function Home() {
   const productRef = useRef<HTMLElement | null>(null);
   const reviewRef = useRef<HTMLElement | null>(null);
   const promotionRef = useRef<HTMLElement | null>(null);
-  
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const imagesRef = useRef<HTMLImageElement[]>([]);
 
   async function loadReviews() {
     setIsLoading(true);
@@ -189,6 +190,93 @@ export default function Home() {
   );
   const paddedFrame = currentFrame.toString().padStart(3, "0");
   const frameSrc = `/frames/frame_${paddedFrame}.png`;
+
+  const drawFrame = (frameIndex: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let nearestImg: HTMLImageElement | null = null;
+    let minDiff = Infinity;
+
+    for (let i = 0; i <= FRAME_COUNT; i++) {
+      const img = imagesRef.current[i];
+      if (img && img.complete && img.naturalWidth > 0) {
+        const diff = Math.abs(i - frameIndex);
+        if (diff < minDiff) {
+          minDiff = diff;
+          nearestImg = img;
+        }
+      }
+    }
+
+    if (nearestImg) {
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const imgWidth = nearestImg.naturalWidth;
+      const imgHeight = nearestImg.naturalHeight;
+
+      const imgRatio = imgWidth / imgHeight;
+      const canvasRatio = canvasWidth / canvasHeight;
+
+      let drawWidth = canvasWidth;
+      let drawHeight = canvasHeight;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      if (canvasRatio > imgRatio) {
+        drawHeight = canvasWidth / imgRatio;
+        offsetY = (canvasHeight - drawHeight) / 2;
+      } else {
+        drawWidth = canvasHeight * imgRatio;
+        offsetX = (canvasWidth - drawWidth) / 2;
+      }
+
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+      ctx.drawImage(nearestImg, offsetX, offsetY, drawWidth, drawHeight);
+    }
+  };
+
+  useEffect(() => {
+    if (!mounted) return;
+    const step = isMobile ? 6 : 1;
+    imagesRef.current = [];
+
+    for (let i = 0; i <= FRAME_COUNT; i += step) {
+      const img = new Image();
+      const paddedFrame = i.toString().padStart(3, "0");
+      img.src = `/frames/frame_${paddedFrame}.png`;
+      img.onload = () => {
+        if (Math.abs(i - currentFrame) <= step) {
+          drawFrame(currentFrame);
+        }
+      };
+      imagesRef.current[i] = img;
+    }
+  }, [mounted, isMobile]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    drawFrame(currentFrame);
+  }, [currentFrame, mounted]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const handleResizeCanvas = () => {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+        drawFrame(currentFrame);
+      }
+    };
+
+    window.addEventListener("resize", handleResizeCanvas);
+    handleResizeCanvas();
+
+    return () => window.removeEventListener("resize", handleResizeCanvas);
+  }, [mounted, currentFrame]);
 
 useEffect(() => {
   setMounted(true);
@@ -562,18 +650,96 @@ function FooterLink({ text }: { text: string }) {
               backgroundColor: "#D8C8B6",
             }}
           >
-            <img
-              src={frameSrc}
-              alt="Solution animation frame"
+            <canvas
+              ref={canvasRef}
               style={{
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                objectPosition: "center center",
                 display: "block",
               }}
             />
           </div>
+
+          {/* Animated Scroll Prompt */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "32px",
+              left: "50%",
+              transform: `translateX(-50%) translateY(${foundationProgress > 0.02 ? "20px" : "0px"})`,
+              opacity: foundationProgress > 0.02 ? 0 : 1,
+              transition: "opacity 0.4s ease, transform 0.4s ease",
+              zIndex: 99,
+              pointerEvents: "none",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "8px",
+                animation: "bounce 2.2s infinite ease-in-out",
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: "rgba(47, 62, 47, 0.95)",
+                  color: "#FFE5D4",
+                  padding: "10px 18px",
+                  borderRadius: "22px",
+                  fontSize: "13px",
+                  fontWeight: 900,
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.14)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Scroll down to explore
+              </div>
+              <div
+                style={{
+                  width: "24px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  border: "2px solid #2F3E2F",
+                  position: "relative",
+                  backgroundColor: "rgba(255, 229, 212, 0.8)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                }}
+              >
+                <div
+                  style={{
+                    width: "4px",
+                    height: "8px",
+                    backgroundColor: "#2F3E2F",
+                    borderRadius: "2px",
+                    position: "absolute",
+                    top: "6px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    animation: "scrollWheel 1.6s infinite",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes bounce {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-8px); }
+            }
+            @keyframes scrollWheel {
+              0% { opacity: 0; top: 6px; }
+              30% { opacity: 1; }
+              90% { opacity: 0; top: 20px; }
+              100% { opacity: 0; top: 6px; }
+            }
+          `}</style>
         </>
       );
     })()}

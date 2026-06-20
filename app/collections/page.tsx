@@ -212,21 +212,34 @@ export default function CollectionsPage() {
                         {product.description}
                         </p>
 
-                      <strong style={{ fontSize: 22 }}>
-                        ₹{Math.round(discountedPrice)}
-                      </strong>
-
-                      {discount > 0 && (
-                        <span
-                          style={{
-                            marginLeft: 10,
-                            color: "#6B705C",
-                            fontWeight: 900,
-                            fontSize: 13,
-                          }}
-                        >
-                          {discount}% OFF
-                        </span>
+                      {discount > 0 ? (
+                        <div style={{ display: "inline-flex", alignItems: "baseline", gap: 10 }}>
+                          <span
+                            style={{
+                              color: "#6B705C",
+                              textDecoration: "line-through",
+                              fontSize: 16,
+                            }}
+                          >
+                            ₹{price}
+                          </span>
+                          <strong style={{ fontSize: 22 }}>
+                            ₹{Math.round(discountedPrice)}
+                          </strong>
+                          <span
+                            style={{
+                              color: "#3A5A40",
+                              fontWeight: 900,
+                              fontSize: 13,
+                            }}
+                          >
+                            {discount}% OFF
+                          </span>
+                        </div>
+                      ) : (
+                        <strong style={{ fontSize: 22 }}>
+                          ₹{price}
+                        </strong>
                       )}
                     </div>
                   </article>

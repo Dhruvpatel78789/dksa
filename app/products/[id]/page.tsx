@@ -356,26 +356,24 @@ export default function ProductPage() {
             </p>
 
             <div style={{ marginTop: 28 }}>
-              <strong style={{ fontSize: 38 }}>
-                ₹{Math.round(pricing.discountedPrice)}
-              </strong>
-
-              {pricing.discount > 0 && (
+              {pricing.discount > 0 ? (
                 <>
                   <span
                     style={{
-                      marginLeft: 12,
                       color: "rgba(255,255,255,0.45)",
                       textDecoration: "line-through",
-                      fontSize: 20,
+                      fontSize: 26,
+                      marginRight: 14,
                     }}
                   >
                     ₹{pricing.price}
                   </span>
-
+                  <strong style={{ fontSize: 38 }}>
+                    ₹{Math.round(pricing.discountedPrice)}
+                  </strong>
                   <span
                     style={{
-                      marginLeft: 12,
+                      marginLeft: 14,
                       color: "#FFE5D4",
                       fontWeight: 900,
                     }}
@@ -383,6 +381,10 @@ export default function ProductPage() {
                     Save {pricing.discount}%
                   </span>
                 </>
+              ) : (
+                <strong style={{ fontSize: 38 }}>
+                  ₹{pricing.price}
+                </strong>
               )}
             </div>
 
@@ -772,20 +774,34 @@ export default function ProductPage() {
                           {item.name}
                         </h3>
 
-                        <strong style={{ fontSize: 26 }}>
-                          ₹{Math.round(discountedPrice)}
-                        </strong>
-
-                        {discount > 0 && (
-                          <span
-                            style={{
-                              marginLeft: 10,
-                              color: "#6B705C",
-                              fontWeight: 900,
-                            }}
-                          >
-                            {discount}% OFF
-                          </span>
+                        {discount > 0 ? (
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                            <span
+                              style={{
+                                color: "#6B705C",
+                                textDecoration: "line-through",
+                                fontSize: 18,
+                              }}
+                            >
+                              ₹{price}
+                            </span>
+                            <strong style={{ fontSize: 26 }}>
+                              ₹{Math.round(discountedPrice)}
+                            </strong>
+                            <span
+                              style={{
+                                color: "#3A5A40",
+                                fontWeight: 900,
+                                fontSize: 13,
+                              }}
+                            >
+                              {discount}% OFF
+                            </span>
+                          </div>
+                        ) : (
+                          <strong style={{ fontSize: 26 }}>
+                            ₹{price}
+                          </strong>
                         )}
                       </div>
                     </article>

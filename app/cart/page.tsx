@@ -202,18 +202,30 @@ async function removeItem(
                         Size: {item.size || "Default"}
                       </p>
 
-                      <strong>₹{Math.round(discountedPrice)}</strong>
-
-                      {item.discountPercentage > 0 && (
-                        <span
-                          style={{
-                            marginLeft: 10,
-                            color: "#6B705C",
-                            fontWeight: 900,
-                          }}
-                        >
-                          {item.discountPercentage}% OFF
-                        </span>
+                      {item.discountPercentage > 0 ? (
+                        <div style={{ display: "inline-flex", alignItems: "baseline", gap: 10 }}>
+                          <span
+                            style={{
+                              color: "#6B705C",
+                              textDecoration: "line-through",
+                              fontSize: 14,
+                            }}
+                          >
+                            ₹{item.price}
+                          </span>
+                          <strong>₹{Math.round(discountedPrice)}</strong>
+                          <span
+                            style={{
+                              color: "#3A5A40",
+                              fontWeight: 900,
+                              fontSize: 12,
+                            }}
+                          >
+                            {item.discountPercentage}% OFF
+                          </span>
+                        </div>
+                      ) : (
+                        <strong>₹{item.price}</strong>
                       )}
                     </div>
 
