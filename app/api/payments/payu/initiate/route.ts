@@ -105,7 +105,9 @@ export async function POST(request: Request) {
 
     const subtotal = items.reduce((sum: number, item: any) => {
       const discountedPrice =
-        item.price - (item.price * (item.discountPercentage || 0)) / 100;
+        item.discountedPrice !== undefined
+          ? item.discountedPrice
+          : item.price - (item.price * (item.discountPercentage || 0)) / 100;
 
       return sum + discountedPrice * item.quantity;
     }, 0);
@@ -151,7 +153,9 @@ export async function POST(request: Request) {
 
       const eligibleTotal = eligibleItems.reduce((sum: number, item: any) => {
         const discountedPrice =
-          item.price - (item.price * (item.discountPercentage || 0)) / 100;
+          item.discountedPrice !== undefined
+            ? item.discountedPrice
+            : item.price - (item.price * (item.discountPercentage || 0)) / 100;
 
         return sum + discountedPrice * item.quantity;
       }, 0);

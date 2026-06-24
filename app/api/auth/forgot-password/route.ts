@@ -1,6 +1,6 @@
 import clientPromise from "@/lib/mongodb";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
+import { sendEmail } from "@/lib/mail";
 
 export async function POST(request: Request) {
   try {
@@ -42,53 +42,27 @@ export async function POST(request: Request) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const resetUrl = `${appUrl}/account?mode=reset&token=${token}&email=${encodeURIComponent(email)}`;
 
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = Number(process.env.SMTP_PORT || 587);
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpFrom = process.env.SMTP_FROM || `"MedTech Support" <noreply@example.com>`;
-
-    if (smtpUser && smtpPass) {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        auth: {
-          user: smtpUser,
-          pass: smtpPass,
-        },
-      });
-
-      const mailOptions = {
-        from: smtpFrom,
-        to: email,
-        subject: "Password Reset Request",
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1d8ce; border-radius: 14px;">
-            <h2 style="color: #3a5a40;">Password Reset Request</h2>
-            <p>You requested a password reset for your account. Please click the button below to reset your password:</p>
-            <div style="margin: 24px 0;">
-              <a href="${resetUrl}" style="background-color: #3a5a40; color: white; padding: 14px 24px; border-radius: 999px; text-decoration: none; font-weight: bold; display: inline-block;">Reset Password</a>
-            </div>
-            <p>This link is valid for 1 hour. If you did not make this request, you can safely ignore this email.</p>
-            <p>Thanks,<br/>MedTech Support Team</p>
+    const previewUrl = await sendEmail({
+      to: email,
+      subject: "Password Reset Request",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1d8ce; border-radius: 14px;">
+          <h2 style="color: #3a5a40;">Password Reset Request</h2>
+          <p>You requested a password reset for your account. Please click the button below to reset your password:</p>
+          <div style="margin: 24px 0;">
+            <a href="${resetUrl}" style="background-color: #3a5a40; color: white; padding: 14px 24px; border-radius: 999px; text-decoration: none; font-weight: bold; display: inline-block;">Reset Password</a>
           </div>
-        `,
-      };
-
-      await transporter.sendMail(mailOptions);
-    } else {
-      // Fallback: log to console in development
-      console.log("\n=========================================");
-      console.log("PASSWORD RESET LINK GENERATED:");
-      console.log("To:", email);
-      console.log("Link:", resetUrl);
-      console.log("=========================================\n");
-    }
+          <p>This link is valid for 1 hour. If you did not make this request, you can safely ignore this email.</p>
+          <p>Thanks,<br/>MedTech Support Team</p>
+        </div>
+      `,
+    });
 
     return Response.json({
       success: true,
-      message: "If that email is registered, a reset link has been sent.",
+      message: previewUrl
+        ? `Reset link generated: ${resetUrl} (Sent via Ethereal: ${previewUrl})`
+        : "If that email is registered, a reset link has been sent.",
     });
   } catch (error) {
     console.error("FORGOT PASSWORD ERROR:", error);

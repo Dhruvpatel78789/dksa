@@ -9,6 +9,7 @@ type CartItem = {
   photo: string;
   price: number;
   discountPercentage: number;
+  discountedPrice?: number;
   quantity: number;
   size: string;
   addedAt: Date;
@@ -116,9 +117,25 @@ export async function POST(request: Request) {
       ? Number(selectedSizeObj.price)
       : Number(product.price || 0);
 
+    let itemDiscountedPrice = itemPrice;
+    if (selectedSizeObj) {
+      if (selectedSizeObj.discountedPrice !== undefined) {
+        itemDiscountedPrice = Number(selectedSizeObj.discountedPrice);
+      } else if (product.discountPercentage) {
+        itemDiscountedPrice = itemPrice - (itemPrice * Number(product.discountPercentage)) / 100;
+      }
+    } else {
+      if (product.discountedPrice !== undefined && Number(product.discountedPrice) > 0) {
+        itemDiscountedPrice = Number(product.discountedPrice);
+      } else if (product.discountPercentage) {
+        itemDiscountedPrice = itemPrice - (itemPrice * Number(product.discountPercentage)) / 100;
+      }
+    }
+
     if (existingIndex >= 0) {
       items[existingIndex].quantity = targetQuantity;
       items[existingIndex].price = itemPrice;
+      items[existingIndex].discountedPrice = itemDiscountedPrice;
     } else {
       items.push({
         productId,
@@ -126,6 +143,7 @@ export async function POST(request: Request) {
         photo: product.photos?.[0] || "",
         price: itemPrice,
         discountPercentage: Number(product.discountPercentage || 0),
+        discountedPrice: itemDiscountedPrice,
         quantity,
         size,
         addedAt: new Date(),

@@ -14,6 +14,7 @@ type Product = {
   photos: string[];
   price?: number;
   discountPercentage?: number;
+  discountedPrice?: number;
   ingredients?: {
     name: string;
     imageUrl: string;
@@ -22,6 +23,7 @@ type Product = {
     size: string;
     qty: number;
     price?: number;
+    discountedPrice?: number;
   }[];
 };
 
@@ -134,8 +136,23 @@ export default function ProductPage() {
   const pricing = useMemo(() => {
     const sizeObj = product?.sizes?.find(s => s.size === selectedSize);
     const price = sizeObj && sizeObj.price !== undefined ? sizeObj.price : (product?.price || 0);
-    const discount = product?.discountPercentage || 0;
-    const discountedPrice = price - (price * discount) / 100;
+
+    let discountedPrice = price;
+    if (sizeObj) {
+      if (sizeObj.discountedPrice !== undefined) {
+        discountedPrice = sizeObj.discountedPrice;
+      } else if (product?.discountPercentage) {
+        discountedPrice = price - (price * product.discountPercentage) / 100;
+      }
+    } else {
+      if (product?.discountedPrice !== undefined && product.discountedPrice > 0) {
+        discountedPrice = product.discountedPrice;
+      } else if (product?.price && product.discountPercentage) {
+        discountedPrice = product.price - (product.price * product.discountPercentage) / 100;
+      }
+    }
+
+    const discount = price > discountedPrice ? Math.round(price - discountedPrice) : 0;
 
     return {
       price,
@@ -378,7 +395,7 @@ export default function ProductPage() {
                       fontWeight: 900,
                     }}
                   >
-                    Save {pricing.discount}%
+                    Save ₹{pricing.discount}
                   </span>
                 </>
               ) : (
@@ -698,9 +715,25 @@ export default function ProductPage() {
               }}
             >
               {suggestedProducts.map((item) => {
-                const price = item.price || 0;
-                const discount = item.discountPercentage || 0;
-                const discountedPrice = price - (price * discount) / 100;
+                const sizeObj = item.sizes && item.sizes.length > 0 ? item.sizes[0] : null;
+                const price = sizeObj && sizeObj.price !== undefined ? sizeObj.price : (item.price || 0);
+
+                let discountedPrice = price;
+                if (sizeObj) {
+                  if (sizeObj.discountedPrice !== undefined) {
+                    discountedPrice = sizeObj.discountedPrice;
+                  } else if (item.discountPercentage) {
+                    discountedPrice = price - (price * item.discountPercentage) / 100;
+                  }
+                } else {
+                  if (item.discountedPrice !== undefined && item.discountedPrice > 0) {
+                    discountedPrice = item.discountedPrice;
+                  } else if (item.discountPercentage) {
+                    discountedPrice = price - (price * item.discountPercentage) / 100;
+                  }
+                }
+
+                const discountAmount = price > discountedPrice ? Math.round(price - discountedPrice) : 0;
 
                 return (
                   <Link
@@ -774,7 +807,7 @@ export default function ProductPage() {
                           {item.name}
                         </h3>
 
-                        {discount > 0 ? (
+                        {discountAmount > 0 ? (
                           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
                             <span
                               style={{
@@ -795,7 +828,7 @@ export default function ProductPage() {
                                 fontSize: 13,
                               }}
                             >
-                              {discount}% OFF
+                              Save ₹{discountAmount}
                             </span>
                           </div>
                         ) : (

@@ -18,6 +18,7 @@ type ProductSize = {
   size: string;
   qty: string;
   price: string;
+  discountedPrice: string;
 };
 
 type Ingredient = {
@@ -35,6 +36,7 @@ type Product = {
   photos: string[];
   price?: number;
   discountPercentage?: number;
+  discountedPrice?: number;
   ingredients: {
     name: string;
     imageUrl: string;
@@ -43,6 +45,7 @@ type Product = {
     size: string;
     qty: number;
     price?: number;
+    discountedPrice?: number;
   }[];
   isPromoted?: boolean;
   promoDescription?: string;
@@ -123,7 +126,7 @@ export default function AdminPage() {
   const [productPhotoFiles, setProductPhotoFiles] = useState<File[]>([]);
   const [productPrice, setProductPrice] = useState("");
   const [productDiscountedPrice, setProductDiscountedPrice] = useState("");
-  const [sizes, setSizes] = useState<ProductSize[]>([{ size: "", qty: "", price: "" }]);
+  const [sizes, setSizes] = useState<ProductSize[]>([{ size: "", qty: "", price: "", discountedPrice: "" }]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([
     { name: "", imageUrl: "", file: null },
   ]);
@@ -361,20 +364,16 @@ export default function AdminPage() {
     setProductDescription(prod.description || "");
     setProductHowToUse(prod.howToUse || "");
     setProductPrice(prod.price ? prod.price.toString() : "");
-    if (prod.price && prod.discountPercentage !== undefined) {
-      const disc = prod.price - (prod.price * prod.discountPercentage) / 100;
-      setProductDiscountedPrice(Math.round(disc).toString());
-    } else {
-      setProductDiscountedPrice(prod.price ? prod.price.toString() : "");
-    }
+    setProductDiscountedPrice(prod.discountedPrice !== undefined ? prod.discountedPrice.toString() : "");
     setSizes(
       prod.sizes && prod.sizes.length > 0
         ? prod.sizes.map((s) => ({
             size: s.size,
             qty: s.qty.toString(),
             price: s.price !== undefined ? s.price.toString() : "",
+            discountedPrice: s.discountedPrice !== undefined ? s.discountedPrice.toString() : "",
           }))
-        : [{ size: "", qty: "", price: "" }]
+        : [{ size: "", qty: "", price: "", discountedPrice: "" }]
     );
     setIngredients(
       prod.ingredients && prod.ingredients.length > 0
@@ -398,7 +397,7 @@ export default function AdminPage() {
     setProductHowToUse("");
     setProductPrice("");
     setProductDiscountedPrice("");
-    setSizes([{ size: "", qty: "", price: "" }]);
+    setSizes([{ size: "", qty: "", price: "", discountedPrice: "" }]);
     setIngredients([{ name: "", imageUrl: "", file: null }]);
     setExistingPhotos([]);
     setProductPhotoFiles([]);
@@ -424,20 +423,37 @@ export default function AdminPage() {
       return;
     }
 
-    if (!productPrice.trim() || Number(productPrice) <= 0) {
-      showToast("error", "Valid product price is required.");
-      return;
+    const cleanSizes = sizes
+      .map((item) => ({
+        size: item.size.trim(),
+        qty: Number(item.qty),
+        price: Number(item.price),
+        discountedPrice: Number(item.discountedPrice),
+      }))
+      .filter((item) => item.size);
+
+    if (cleanSizes.length > 0) {
+      if (cleanSizes.some((item) => Number.isNaN(item.qty) || item.qty < 0 || Number.isNaN(item.price) || item.price <= 0 || Number.isNaN(item.discountedPrice) || item.discountedPrice <= 0 || item.discountedPrice > item.price)) {
+        showToast("error", "Each size must have valid quantity, original price, and discounted price (which cannot exceed the original price).");
+        return;
+      }
+    } else {
+      if (!productPrice.trim() || Number(productPrice) <= 0) {
+        showToast("error", "Valid product original price is required when no sizes are defined.");
+        return;
+      }
+      if (!productDiscountedPrice.trim() || Number(productDiscountedPrice) <= 0) {
+        showToast("error", "Valid product discounted price is required when no sizes are defined.");
+        return;
+      }
+      if (Number(productDiscountedPrice) > Number(productPrice)) {
+        showToast("error", "Product discounted price cannot exceed its original price.");
+        return;
+      }
     }
 
-    const origPrice = Number(productPrice);
-    const discPrice = productDiscountedPrice ? Number(productDiscountedPrice) : origPrice;
-
-    if (Number.isNaN(discPrice) || discPrice <= 0 || discPrice > origPrice) {
-      showToast("error", "Discounted price must be greater than 0 and less than or equal to the original price.");
-      return;
-    }
-
-    const calculatedDiscount = Math.round(((origPrice - discPrice) / origPrice) * 100);
+    const origPrice = cleanSizes.length > 0 ? 0 : Number(productPrice);
+    const discPrice = cleanSizes.length > 0 ? 0 : Number(productDiscountedPrice);
 
     const totalPhotos = (editingProduct ? existingPhotos.length : 0) + productPhotoFiles.length;
     if (totalPhotos === 0) {
@@ -445,23 +461,7 @@ export default function AdminPage() {
       return;
     }
 
-    const cleanSizes = sizes
-      .map((item) => ({
-        size: item.size.trim(),
-        qty: Number(item.qty),
-        price: Number(item.price),
-      }))
-      .filter((item) => item.size);
 
-    if (cleanSizes.length === 0) {
-      showToast("error", "At least one product size is required.");
-      return;
-    }
-
-    if (cleanSizes.some((item) => Number.isNaN(item.qty) || item.qty < 0 || Number.isNaN(item.price) || item.price <= 0)) {
-      showToast("error", "Each size must have valid quantity and price.");
-      return;
-    }
 
     setIsSaving(true);
 
@@ -513,7 +513,8 @@ export default function AdminPage() {
           howToUse: productHowToUse,
           photos: finalPhotoUrls,
           price: origPrice,
-          discountPercentage: calculatedDiscount,
+          discountedPrice: discPrice,
+          discountPercentage: 0,
           ingredients: uploadedIngredients,
           sizes: cleanSizes,
         }),
@@ -1157,29 +1158,36 @@ export default function AdminPage() {
                   )}
                 </div>
 
-                <div>
-                  <label style={labelStyle}>Original Price (₹)</label>
-                  <input
-                    value={productPrice || ""}
-                    onChange={(e) => setProductPrice(e.target.value)}
-                    placeholder="1299"
-                    type="number"
-                    style={inputStyle}
-                  />
-                </div>
+                {(() => {
+                  const hasSizes = sizes.some(s => s.size.trim().length > 0);
+                  return (
+                    <>
+                      <div>
+                        <label style={labelStyle}>Original Price (₹) {hasSizes && "(Disabled - using Size pricing)"}</label>
+                        <input
+                          value={hasSizes ? "" : (productPrice || "")}
+                          onChange={(e) => setProductPrice(e.target.value)}
+                          placeholder="1299"
+                          type="number"
+                          disabled={hasSizes}
+                          style={{ ...inputStyle, opacity: hasSizes ? 0.5 : 1, cursor: hasSizes ? "not-allowed" : "text" }}
+                        />
+                      </div>
 
-                <div>
-                  <label style={labelStyle}>Discounted Price (₹)</label>
-                  <input
-                    value={productDiscountedPrice || ""}
-                    onChange={(e) =>
-                      setProductDiscountedPrice(e.target.value)
-                    }
-                    placeholder="1169"
-                    type="number"
-                    style={inputStyle}
-                  />
-                </div>
+                      <div>
+                        <label style={labelStyle}>Discounted Price (₹) {hasSizes && "(Disabled - using Size pricing)"}</label>
+                        <input
+                          value={hasSizes ? "" : (productDiscountedPrice || "")}
+                          onChange={(e) => setProductDiscountedPrice(e.target.value)}
+                          placeholder="1169"
+                          type="number"
+                          disabled={hasSizes}
+                          style={{ ...inputStyle, opacity: hasSizes ? 0.5 : 1, cursor: hasSizes ? "not-allowed" : "text" }}
+                        />
+                      </div>
+                    </>
+                  );
+                })()}
 
                 <div style={{ gridColumn: "1 / -1" }}>
                   <label style={labelStyle}>Description</label>
@@ -1215,7 +1223,7 @@ export default function AdminPage() {
                   <h3 style={{ margin: 0 }}>Available Sizes</h3>
                   <button
                     onClick={() =>
-                      setSizes((prev) => [...prev, { size: "", qty: "", price: "" }])
+                      setSizes((prev) => [...prev, { size: "", qty: "", price: "", discountedPrice: "" }])
                     }
                     style={smallButtonStyle}
                   >
@@ -1259,29 +1267,39 @@ export default function AdminPage() {
                         style={inputStyle}
                       />
 
-                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                        <input
-                          value={item.price}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setSizes((prev) =>
-                              prev.map((sizeItem, sizeIndex) =>
-                                sizeIndex === index
-                                  ? { ...sizeItem, price: value }
-                                  : sizeItem
-                              )
-                            );
-                          }}
-                          placeholder="Orig. Price (₹)"
-                          type="number"
-                          style={inputStyle}
-                        />
-                        {Number(item.price) > 0 && (
-                          <span style={{ fontSize: "12px", color: "#6B705C" }}>
-                            Discounted: ₹{Math.round(Number(item.price) * (1 - (Math.round(((Number(productPrice) - Number(productDiscountedPrice || productPrice)) / (Number(productPrice) || 1)) * 100) || 0) / 100))}
-                          </span>
-                        )}
-                      </div>
+                      <input
+                        value={item.price}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSizes((prev) =>
+                            prev.map((sizeItem, sizeIndex) =>
+                              sizeIndex === index
+                                ? { ...sizeItem, price: value }
+                                : sizeItem
+                            )
+                          );
+                        }}
+                        placeholder="Original Price (₹)"
+                        type="number"
+                        style={inputStyle}
+                      />
+
+                      <input
+                        value={item.discountedPrice}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSizes((prev) =>
+                            prev.map((sizeItem, sizeIndex) =>
+                              sizeIndex === index
+                                ? { ...sizeItem, discountedPrice: value }
+                                : sizeItem
+                            )
+                          );
+                        }}
+                        placeholder="Discounted Price (₹)"
+                        type="number"
+                        style={inputStyle}
+                      />
 
                       <button
                         onClick={() => {
@@ -1406,18 +1424,44 @@ export default function AdminPage() {
                         <h3 style={{ margin: "0 0 8px" }}>{item.name}</h3>
                         <p style={mutedParagraphStyle}>{item.category || "No category"}</p>
                         <p style={{ margin: "0 0 14px", fontWeight: 700 }}>
-                          {item.discountPercentage ? (
-                            <>
-                              <span style={{ textDecoration: "line-through", color: "#8B6F47", marginRight: "8px", fontSize: "14px" }}>
-                                ₹{item.price || 0}
-                              </span>
-                              <span style={{ color: "#2F3E2F" }}>
-                                ₹{Math.round((item.price || 0) - ((item.price || 0) * item.discountPercentage) / 100)}
-                              </span>
-                            </>
-                          ) : (
-                            <span>₹{item.price || 0}</span>
-                          )}
+                          {(() => {
+                            if (item.sizes && item.sizes.length > 0) {
+                              const sizePrices = item.sizes.map((s: any) => s.discountedPrice !== undefined ? s.discountedPrice : (s.price || 0));
+                              const minPrice = Math.min(...sizePrices);
+                              const maxPrice = Math.max(...sizePrices);
+                              return (
+                                <span>
+                                  {minPrice === maxPrice ? `₹${minPrice}` : `₹${minPrice} - ₹${maxPrice}`} (Sizes)
+                                </span>
+                              );
+                            }
+                            const hasDiscount = item.discountedPrice !== undefined && item.discountedPrice < (item.price || 0);
+                            if (hasDiscount) {
+                              return (
+                                <>
+                                  <span style={{ textDecoration: "line-through", color: "#8B6F47", marginRight: "8px", fontSize: "14px" }}>
+                                    ₹{item.price}
+                                  </span>
+                                  <span style={{ color: "#2F3E2F" }}>
+                                    ₹{item.discountedPrice}
+                                  </span>
+                                </>
+                              );
+                            }
+                            if (item.discountPercentage) {
+                              return (
+                                <>
+                                  <span style={{ textDecoration: "line-through", color: "#8B6F47", marginRight: "8px", fontSize: "14px" }}>
+                                    ₹{item.price || 0}
+                                  </span>
+                                  <span style={{ color: "#2F3E2F" }}>
+                                    ₹{Math.round((item.price || 0) - ((item.price || 0) * item.discountPercentage) / 100)}
+                                  </span>
+                                </>
+                              );
+                            }
+                            return <span>₹{item.price || 0}</span>;
+                          })()}
                         </p>
 
                         <div style={{ display: "flex", gap: "10px", marginTop: "14px" }}>
@@ -1647,18 +1691,38 @@ export default function AdminPage() {
 
                             <strong>{item.name}</strong>
                              <p style={mutedParagraphStyle}>
-                               {item.discountPercentage ? (
-                                 <>
-                                   <span style={{ textDecoration: "line-through", color: "#8B6F47", marginRight: "8px", fontSize: "13px" }}>
-                                     ₹{item.price || 0}
-                                   </span>
-                                   <span>
-                                     ₹{Math.round((item.price || 0) - ((item.price || 0) * item.discountPercentage) / 100)}
-                                   </span>
-                                 </>
-                               ) : (
-                                 <span>₹{item.price || 0}</span>
-                               )}
+                               {(() => {
+                                 if (item.sizes && item.sizes.length > 0) {
+                                   const sizePrices = item.sizes.map((s: any) => s.discountedPrice !== undefined ? s.discountedPrice : (s.price || 0));
+                                   const minPrice = Math.min(...sizePrices);
+                                   const maxPrice = Math.max(...sizePrices);
+                                   return <span>{minPrice === maxPrice ? `₹${minPrice}` : `₹${minPrice} - ₹${maxPrice}`} (Sizes)</span>;
+                                 }
+                                 const hasDiscount = item.discountedPrice !== undefined && item.discountedPrice < (item.price || 0);
+                                 if (hasDiscount) {
+                                   return (
+                                     <>
+                                       <span style={{ textDecoration: "line-through", color: "#8B6F47", marginRight: "8px", fontSize: "13px" }}>
+                                         ₹{item.price || 0}
+                                       </span>
+                                       <span>₹{item.discountedPrice}</span>
+                                     </>
+                                   );
+                                 }
+                                 if (item.discountPercentage) {
+                                   return (
+                                     <>
+                                       <span style={{ textDecoration: "line-through", color: "#8B6F47", marginRight: "8px", fontSize: "13px" }}>
+                                         ₹{item.price || 0}
+                                       </span>
+                                       <span>
+                                         ₹{Math.round((item.price || 0) - ((item.price || 0) * item.discountPercentage) / 100)}
+                                       </span>
+                                     </>
+                                   );
+                                 }
+                                 return <span>₹{item.price || 0}</span>;
+                               })()}
                              </p>
                           </label>
                         );
@@ -2157,7 +2221,7 @@ const sectionHeaderStyle: React.CSSProperties = {
 
 const rowGridStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1fr 120px 120px 110px",
+  gridTemplateColumns: "1fr 100px 140px 140px 110px",
   gap: "12px",
 };
 

@@ -59,7 +59,8 @@ if (decoded.role !== "admin") {
     const ingredients = Array.isArray(body.ingredients) ? body.ingredients : [];
     const sizes = Array.isArray(body.sizes) ? body.sizes : [];
 
-    const price = Number(body.price);
+    const price = Number(body.price || 0);
+    const discountedPrice = Number(body.discountedPrice || 0);
     const discountPercentage = Number(body.discountPercentage || 0);
 
     if (!name) {
@@ -97,47 +98,38 @@ if (decoded.role !== "admin") {
       );
     }
 
-    if (Number.isNaN(price) || price <= 0) {
-      return Response.json(
-        { error: "Valid product price is required" },
-        { status: 400 }
-      );
-    }
-
-    if (
-      Number.isNaN(discountPercentage) ||
-      discountPercentage < 0 ||
-      discountPercentage > 100
-    ) {
-      return Response.json(
-        { error: "Discount percentage must be between 0 and 100" },
-        { status: 400 }
-      );
-    }
-
-    if (sizes.length === 0) {
-      return Response.json(
-        { error: "At least one size is required" },
-        { status: 400 }
-      );
-    }
-
     const cleanSizes = sizes.map((item: any) => ({
       size: String(item.size || "").trim(),
       qty: Number(item.qty || 0),
       price: Number(item.price || 0),
-    }));
+      discountedPrice: Number(item.discountedPrice || 0),
+    })).filter((item: any) => item.size);
 
-    const hasInvalidSize = cleanSizes.some(
-      (item: { size: string; qty: number; price: number }) =>
-        !item.size || Number.isNaN(item.qty) || item.qty < 0 || Number.isNaN(item.price) || item.price <= 0
-    );
-
-    if (hasInvalidSize) {
-      return Response.json(
-        { error: "Each size must have valid size, quantity, and price" },
-        { status: 400 }
+    if (cleanSizes.length > 0) {
+      const hasInvalidSize = cleanSizes.some(
+        (item: { size: string; qty: number; price: number; discountedPrice: number }) =>
+          !item.size || Number.isNaN(item.qty) || item.qty < 0 || Number.isNaN(item.price) || item.price <= 0 || Number.isNaN(item.discountedPrice) || item.discountedPrice <= 0 || item.discountedPrice > item.price
       );
+
+      if (hasInvalidSize) {
+        return Response.json(
+          { error: "Each size must have valid size, quantity, original price, and discounted price (which cannot exceed the original price)" },
+          { status: 400 }
+        );
+      }
+    } else {
+      if (Number.isNaN(price) || price <= 0) {
+        return Response.json(
+          { error: "Valid product original price is required when no sizes are defined" },
+          { status: 400 }
+        );
+      }
+      if (Number.isNaN(discountedPrice) || discountedPrice <= 0 || discountedPrice > price) {
+        return Response.json(
+          { error: "Valid product discounted price is required and cannot exceed original price" },
+          { status: 400 }
+        );
+      }
     }
 
     const cleanIngredients = ingredients
@@ -160,7 +152,8 @@ if (decoded.role !== "admin") {
       howToUse,
       photos,
 
-      price,
+      price: cleanSizes.length > 0 ? 0 : price,
+      discountedPrice: cleanSizes.length > 0 ? 0 : discountedPrice,
       discountPercentage,
 
       ingredients: cleanIngredients,

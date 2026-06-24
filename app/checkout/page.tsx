@@ -10,6 +10,7 @@ type CartItem = {
   photo?: string;
   price: number;
   discountPercentage: number;
+  discountedPrice?: number;
   size: string;
   quantity: number;
 };
@@ -80,13 +81,15 @@ export default function CheckoutPage() {
   }, []);
 
   const subtotal = useMemo(() => {
-  return cart.reduce((sum, item) => {
-    const discountedPrice =
-      item.price - (item.price * (item.discountPercentage || 0)) / 100;
+    return cart.reduce((sum, item) => {
+      const discountedPrice =
+        item.discountedPrice !== undefined
+          ? item.discountedPrice
+          : item.price - (item.price * (item.discountPercentage || 0)) / 100;
 
-    return sum + discountedPrice * item.quantity;
-  }, 0);
-}, [cart]);
+      return sum + discountedPrice * item.quantity;
+    }, 0);
+  }, [cart]);
 
 const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
 
@@ -379,8 +382,10 @@ const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
   <div style={{ display: "grid", gap: 14, marginBottom: 24 }}>
     {cart.map((item) => {
       const discountedPrice =
-        item.price -
-        (item.price * (item.discountPercentage || 0)) / 100;
+        item.discountedPrice !== undefined
+          ? item.discountedPrice
+          : item.price -
+            (item.price * (item.discountPercentage || 0)) / 100;
 
       return (
         <div

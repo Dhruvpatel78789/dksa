@@ -10,6 +10,7 @@ type CartItem = {
   photo?: string;
   price: number;
   discountPercentage: number;
+  discountedPrice?: number;
   size: string;
   quantity: number;
 };
@@ -48,7 +49,9 @@ export default function CartPage() {
   const total = useMemo(() => {
     return cart.reduce((sum, item) => {
       const discountedPrice =
-        item.price - (item.price * (item.discountPercentage || 0)) / 100;
+        item.discountedPrice !== undefined
+          ? item.discountedPrice
+          : item.price - (item.price * (item.discountPercentage || 0)) / 100;
 
       return sum + discountedPrice * item.quantity;
     }, 0);
@@ -167,8 +170,10 @@ async function removeItem(
           ) : (
             cart.map((item) => {
               const discountedPrice =
-                item.price -
-                (item.price * (item.discountPercentage || 0)) / 100;
+                item.discountedPrice !== undefined
+                  ? item.discountedPrice
+                  : item.price -
+                    (item.price * (item.discountPercentage || 0)) / 100;
 
               return (
                 <article
@@ -202,7 +207,7 @@ async function removeItem(
                         Size: {item.size || "Default"}
                       </p>
 
-                      {item.discountPercentage > 0 ? (
+                      {item.price > discountedPrice ? (
                         <div style={{ display: "inline-flex", alignItems: "baseline", gap: 10 }}>
                           <span
                             style={{
@@ -221,7 +226,7 @@ async function removeItem(
                               fontSize: 12,
                             }}
                           >
-                            {item.discountPercentage}% OFF
+                            Save ₹{Math.round(item.price - discountedPrice)}
                           </span>
                         </div>
                       ) : (
