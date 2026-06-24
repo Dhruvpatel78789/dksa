@@ -279,7 +279,7 @@ export default function ProductPage() {
                     fontSize: 13,
                   }}
                 >
-                  {pricing.discount}% OFF
+                  ₹{pricing.discount} OFF
                 </div>
               )}
             </div>
