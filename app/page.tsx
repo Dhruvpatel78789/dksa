@@ -13,17 +13,17 @@ function clamp(value: number, min = 0, max = 1) {
 
 const products = [
   {
-    slug: "root-revival-serum",
-    name: "Root Revival Serum",
+    slug: "root-revival-oil",
+    name: "Root Revival Oil",
     image: "/products/product-1.png",
     description:
-      "A lightweight daily serum designed to support healthier-looking roots and reduce visible hair stress.",
+      "A lightweight daily oil designed to support healthier-looking roots and reduce visible hair stress.",
     benefits: [
       "Supports stronger-looking roots",
       "Helps reduce visible hair fall",
       "Non-sticky daily formula",
     ],
-    cta: "Explore Serum",
+    cta: "Explore Oil",
     callouts: ["root support", "hair fall care"],
   },
   {
