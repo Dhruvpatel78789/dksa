@@ -28,12 +28,13 @@ const products = [
   },
   {
     slug: "scalp-balance-cleanser",
-    name: "Scalp Balance Cleanser",
+    name: "Anti Aging & Rejuvenating (21 bhavna yukta) Scalp Balance Cleanser",
     image: "/products/product-2.png",
     description:
       "A gentle scalp-first cleanser crafted to refresh buildup, calm dryness, and support a cleaner scalp environment.",
     benefits: [
-      "Helps manage flaky scalp",
+      "Relieves pitta roga",
+      "Best to stop hair fall",
       "Refreshes oil and buildup",
       "Gentle enough for routine use",
     ],
