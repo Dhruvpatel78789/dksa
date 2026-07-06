@@ -47,3 +47,35 @@ export async function GET(request: Request) {
     );
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { name, review, product } = body;
+
+    if (!name || !name.trim() || !review || !review.trim() || !product || !product.trim()) {
+      return Response.json(
+        { error: "Name, review text, and product are required." },
+        { status: 400 }
+      );
+    }
+
+    const client = await clientPromise;
+    const db = client.db("medtech");
+
+    await db.collection("reviews").insertOne({
+      name: name.trim(),
+      review: review.trim(),
+      product: product.trim(),
+      type: "text",
+      mediaUrl: null,
+      isSelectedForHome: false,
+      createdAt: new Date(),
+    });
+
+    return Response.json({ message: "Review submitted successfully" });
+  } catch (error) {
+    console.error("USER POST REVIEW ERROR:", error);
+    return Response.json({ error: "Server error" }, { status: 500 });
+  }
+}

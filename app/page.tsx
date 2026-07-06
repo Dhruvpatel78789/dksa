@@ -61,6 +61,7 @@ export default function Home() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [promotions, setPromotions] = useState<any[]>([]);
   const [activeIndex, setActiveIndex] = useState<number>(0);
+  const [activeSlide, setActiveSlide] = useState<number>(0);
 
   const [hoveredPromotionIndex, setHoveredPromotionIndex] = useState<number | null>(
     null
@@ -71,6 +72,8 @@ export default function Home() {
   const isMobile = mounted ? isMobileRaw : false;
 
   const [foundationProgress, setFoundationProgress] = useState<number>(0);
+  const [promoScrollProgress, setPromoScrollProgress] = useState<number>(0);
+  const [hasScrolled, setHasScrolled] = useState(false);
   const [productProgress, setProductProgress] = useState<number>(0);
   const [reviewProgress, setReviewProgress] = useState<number>(0);
   const [isReviewSectionActive, setIsReviewSectionActive] = useState(false);
@@ -119,9 +122,17 @@ export default function Home() {
 }
 
   useEffect(() => {
-  loadReviews();
-  loadPromotions();
-}, []);
+    loadReviews();
+    loadPromotions();
+  }, []);
+
+  useEffect(() => {
+    if (promotions.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % promotions.length);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [promotions.length]);
 
   useEffect(() => {
     function getSectionProgress(section: HTMLElement | null) {
@@ -154,9 +165,12 @@ export default function Home() {
       setIsReviewSectionActive(reviewSectionActive);
      
 
+      const promo = getSectionProgress(promotionRef.current);
+      setPromoScrollProgress(promo);
       setFoundationProgress(foundation);
       setProductProgress(product);
       setReviewProgress(review);
+      setHasScrolled(window.scrollY > 30);
       
 
       if (reviews.length > 0) {
@@ -354,7 +368,261 @@ function FooterLink({ text }: { text: string }) {
   }}
 >
 </div>
-     {/* SECTION 1: PROBLEMS + SOLUTION + FRAME SEQUENCE */}
+      {/* SECTION 5: PROMOTED PRODUCTS (Moved to top) */}
+      {promotions && promotions.length > 0 && (
+        <section
+          ref={promotionRef}
+          style={{
+            position: "relative",
+            height: "100vh",
+            backgroundColor: "#FFE5D4",
+            width: "100%",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              transform: `translateX(-${activeSlide * 100}%)`,
+              transition: "transform 1.2s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+          >
+            {promotions.map((item, index) => (
+              <div
+                key={item._id || index}
+                onClick={() => {
+                  window.location.href = `/products/${item._id}`;
+                }}
+                style={{
+                  flex: "0 0 100%",
+                  width: "100vw",
+                  height: "100vh",
+                  position: "relative",
+                  cursor: "pointer",
+                }}
+              >
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+
+                {/* Blurred glassmorphism overlay in the bottom portion */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "70%",
+                    backgroundColor: "rgba(0, 0, 0, 0.25)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    WebkitMaskImage: "linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%)",
+                    maskImage: "linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%)",
+                    pointerEvents: "none",
+                  }}
+                />
+
+                {/* Name & Rating display */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: isMobile ? "140px" : "150px",
+                    left: isMobile ? "24px" : "64px",
+                    right: isMobile ? "24px" : "64px",
+                    textAlign: "left",
+                    pointerEvents: "none",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px",
+                  }}
+                >
+                  {/* Rating Capsule */}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignSelf: "flex-start",
+                      alignItems: "center",
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: "999px",
+                      padding: "4px 16px 4px 4px",
+                      boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
+                      border: "1px solid rgba(255,255,255,0.5)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: "#81B29A",
+                        color: "#FFFFFF",
+                        padding: "6px 14px",
+                        borderRadius: "999px",
+                        fontSize: "12px",
+                        fontWeight: 900,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "2px",
+                      }}
+                    >
+                      <span>{Number(item.promoRating || 5).toFixed(1)}</span>
+                      <span style={{ fontSize: "10px" }}>★</span>
+                    </div>
+                    <span
+                      style={{
+                        marginLeft: "10px",
+                        color: "#2F3E2F",
+                        fontSize: "10px",
+                        fontWeight: 900,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      AVG. RATING
+                    </span>
+                  </div>
+
+                  <h3
+                    style={{
+                      margin: 0,
+                      color: "#FFE5D4",
+                      fontSize: isMobile ? "32px" : "56px",
+                      fontWeight: 900,
+                      letterSpacing: "-0.04em",
+                      lineHeight: 1.1,
+                      textShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {item.name}
+                  </h3>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Premium Auto Scroll Dots */}
+          {promotions.length > 1 && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: "90px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                display: "flex",
+                gap: "8px",
+                zIndex: 100,
+              }}
+            >
+              {promotions.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveSlide(i);
+                  }}
+                  style={{
+                    width: i === activeSlide ? "24px" : "8px",
+                    height: "8px",
+                    borderRadius: "4px",
+                    backgroundColor: i === activeSlide ? "#2F3E2F" : "rgba(47, 62, 47, 0.3)",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "width 0.4s ease, background-color 0.4s ease",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Animated Scroll Prompt */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "32px",
+              left: "50%",
+              transform: `translateX(-50%) translateY(${hasScrolled ? "20px" : "0px"})`,
+              opacity: hasScrolled ? 0 : 1,
+              transition: "opacity 0.4s ease, transform 0.4s ease",
+              zIndex: 999,
+              pointerEvents: "none",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "8px",
+                animation: "bounce 2.2s infinite ease-in-out",
+              }}
+            >
+              <div
+                style={{
+                  backgroundColor: "rgba(47, 62, 47, 0.95)",
+                  color: "#FFE5D4",
+                  padding: "10px 18px",
+                  borderRadius: "22px",
+                  fontSize: "13px",
+                  fontWeight: 900,
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.14)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Scroll down to explore
+              </div>
+              <div
+                style={{
+                  width: "24px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  border: "2px solid #2F3E2F",
+                  position: "relative",
+                  backgroundColor: "rgba(255, 229, 212, 0.8)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                }}
+              >
+                <div
+                  style={{
+                    width: "4px",
+                    height: "8px",
+                    backgroundColor: "#2F3E2F",
+                    borderRadius: "2px",
+                    position: "absolute",
+                    top: "6px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    animation: "scrollWheel 1.6s infinite",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes bounce {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-8px); }
+            }
+            @keyframes scrollWheel {
+              0% { opacity: 0; top: 6px; }
+              30% { opacity: 1; }
+              90% { opacity: 0; top: 20px; }
+              100% { opacity: 0; top: 6px; }
+            }
+          `}</style>
+        </section>
+      )}
+
+      {/* SECTION 1: PROBLEMS + SOLUTION + FRAME SEQUENCE */}
 <section
   ref={foundationRef}
   style={{
@@ -662,85 +930,7 @@ function FooterLink({ text }: { text: string }) {
             />
           </div>
 
-          {/* Animated Scroll Prompt */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: "32px",
-              left: "50%",
-              transform: `translateX(-50%) translateY(${foundationProgress > 0.02 ? "20px" : "0px"})`,
-              opacity: foundationProgress > 0.02 ? 0 : 1,
-              transition: "opacity 0.4s ease, transform 0.4s ease",
-              zIndex: 99,
-              pointerEvents: "none",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "8px",
-                animation: "bounce 2.2s infinite ease-in-out",
-              }}
-            >
-              <div
-                style={{
-                  backgroundColor: "rgba(47, 62, 47, 0.95)",
-                  color: "#FFE5D4",
-                  padding: "10px 18px",
-                  borderRadius: "22px",
-                  fontSize: "13px",
-                  fontWeight: 900,
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.14)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Scroll down to explore
-              </div>
-              <div
-                style={{
-                  width: "24px",
-                  height: "40px",
-                  borderRadius: "12px",
-                  border: "2px solid #2F3E2F",
-                  position: "relative",
-                  backgroundColor: "rgba(255, 229, 212, 0.8)",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                }}
-              >
-                <div
-                  style={{
-                    width: "4px",
-                    height: "8px",
-                    backgroundColor: "#2F3E2F",
-                    borderRadius: "2px",
-                    position: "absolute",
-                    top: "6px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    animation: "scrollWheel 1.6s infinite",
-                  }}
-                />
-              </div>
-            </div>
-          </div>
 
-          <style>{`
-            @keyframes bounce {
-              0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-8px); }
-            }
-            @keyframes scrollWheel {
-              0% { opacity: 0; top: 6px; }
-              30% { opacity: 1; }
-              90% { opacity: 0; top: 20px; }
-              100% { opacity: 0; top: 6px; }
-            }
-          `}</style>
         </>
       );
     })()}
@@ -1300,157 +1490,7 @@ function FooterLink({ text }: { text: string }) {
           </div>
         </div>
       </section>
-     {/* SECTION 5: PROMOTED PRODUCTS */}
-<section
-  style={{
-    backgroundColor: "#F7EFE7",
-    padding: isMobile ? "56px 0 64px" : "88px 0 96px",
-    overflow: "hidden",
-    width: "100%",
-  }}
->
-  <div
-    style={{
-      padding: isMobile ? "0 22px" : "0 54px",
-      marginBottom: isMobile ? "28px" : "44px",
-    }}
-  >
-    <p
-      style={{
-        margin: "0 0 8px",
-        color: "#6B705C",
-        fontWeight: 900,
-        letterSpacing: "0.1em",
-        textTransform: "uppercase",
-        fontSize: "13px",
-      }}
-    >
-      Featured Care
-    </p>
 
-    <h2
-      style={{
-        margin: 0,
-        color: "#2F3E2F",
-        fontSize: isMobile
-          ? "clamp(38px, 11vw, 58px)"
-          : "clamp(64px, 8vw, 130px)",
-        lineHeight: 0.9,
-        letterSpacing: "-0.08em",
-        maxWidth: isMobile ? "92vw" : "900px",
-      }}
-    >
-      Products worth your routine.
-    </h2>
-  </div>
-
-  <div
-    style={{
-      overflowX: "auto",
-      overflowY: "hidden",
-      WebkitOverflowScrolling: "touch",
-      scrollbarWidth: "none",
-      paddingBottom: isMobile ? "28px" : "40px",
-    }}
-  >
-    <div
-      style={{
-        display: "flex",
-        gap: isMobile ? "16px" : "28px",
-        padding: isMobile ? "24px 22px" : "36px 54px",
-        width: "max-content",
-      }}
-    >
-      {promotions.map((item, index) => {
-        const isHovered = hoveredPromotionIndex === index;
-
-        return (
-          <article
-          
-            key={item._id || index}
-            onMouseEnter={() => setHoveredPromotionIndex(index)}
-            onMouseLeave={() => setHoveredPromotionIndex(null)}
-            onClick={() => {
-              window.location.href = `/products/${item._id}`;
-            }}
-            style={{
-              flex: "0 0 auto",
-              width: isMobile ? "86vw" : "min(420px, 32vw)",
-              height: isMobile ? "560px" : "620px",
-              borderRadius: isMobile ? "30px" : "44px",
-              backgroundColor: "#FFFFFF",
-              boxShadow: isHovered
-                ? "0 30px 58px rgba(58,90,64,0.2)"
-                : "0 20px 42px rgba(58,90,64,0.14)",
-              padding: isMobile ? "14px" : "22px",
-              boxSizing: "border-box",
-              transform: `scale(${isHovered ? 1.025 : 1})`,
-              transition: "transform 0.22s ease, box-shadow 0.22s ease",
-              overflow: "hidden",
-              cursor: "pointer",
-            }}
-          >
-            <div
-              style={{
-                width: "100%",
-                height: isMobile ? "66%" : "72%",
-                borderRadius: isMobile ? "24px" : "34px",
-                overflow: "hidden",
-                backgroundColor: "#E9DED2",
-                marginBottom: isMobile ? "14px" : "22px",
-              }}
-            >
-              <img
-                src={item.image}
-                alt={item.name}
-                loading="lazy"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                  transform: `scale(${isHovered ? 1.06 : 1.02})`,
-                  transition: "transform 0.22s ease",
-                }}
-              />
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gap: isMobile ? "8px" : "12px",
-              }}
-            >
-              <h3
-                style={{
-                  margin: 0,
-                  color: "#2F3E2F",
-                  fontSize: isMobile ? "28px" : "42px",
-                  lineHeight: 0.95,
-                  letterSpacing: "-0.06em",
-                }}
-              >
-                {item.name}
-              </h3>
-
-              <p
-                style={{
-                  margin: 0,
-                  color: "#6B705C",
-                  fontSize: isMobile ? "14px" : "18px",
-                  lineHeight: 1.45,
-                  maxWidth: "94%",
-                }}
-              >
-                {item.promoDescription}
-              </p>
-            </div>
-          </article>
-        );
-      })}
-    </div>
-  </div>
-</section>
 {/* FOOTER */}
 <footer
   style={{

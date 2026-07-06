@@ -50,6 +50,57 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
 
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [newReviewName, setNewReviewName] = useState("");
+  const [newReviewText, setNewReviewText] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  async function submitProductReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!product) return;
+    if (!newReviewName.trim() || !newReviewText.trim()) {
+      alert("Please fill in both name and review text.");
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const res = await fetch("/api/user/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: newReviewName,
+          review: newReviewText,
+          product: product.name,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to submit review");
+        return;
+      }
+
+      setNewReviewName("");
+      setNewReviewText("");
+      setShowReviewForm(false);
+      alert("Thank you! Your review has been submitted.");
+
+      const reviewRes = await fetch(
+        `/api/user/reviews?product=${encodeURIComponent(product.name)}`
+      );
+      const reviewData = await reviewRes.json();
+      setReviews(reviewData.reviews || []);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit review.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
+
   async function addToCart() {
     if (!product) return;
 
@@ -605,16 +656,121 @@ export default function ProductPage() {
             Reviews
           </p>
 
-          <h2
+          <div
             style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
               margin: "8px 0 28px",
-              fontSize: "clamp(44px, 8vw, 96px)",
-              lineHeight: 0.88,
-              letterSpacing: "-0.08em",
             }}
           >
-            what people say
-          </h2>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "clamp(44px, 8vw, 96px)",
+                lineHeight: 0.88,
+                letterSpacing: "-0.08em",
+              }}
+            >
+              what people say
+            </h2>
+            <button
+              onClick={() => setShowReviewForm(!showReviewForm)}
+              style={{
+                backgroundColor: "#FFE5D4",
+                color: "#2F3E2F",
+                border: "none",
+                borderRadius: "20px",
+                padding: "10px 20px",
+                fontSize: "14px",
+                fontWeight: 900,
+                cursor: "pointer",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+              }}
+            >
+              {showReviewForm ? "Cancel Review" : "Write a Review"}
+            </button>
+          </div>
+
+          {showReviewForm && (
+            <form
+              onSubmit={submitProductReview}
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                borderRadius: "24px",
+                padding: "24px",
+                marginBottom: "32px",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              <h3 style={{ margin: "0 0 16px", color: "#FFE5D4", fontSize: "20px", fontWeight: 700 }}>Share Your Experience</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>Your Name</label>
+                  <input
+                    type="text"
+                    value={newReviewName}
+                    onChange={(e) => setNewReviewName(e.target.value)}
+                    placeholder="Enter your name"
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      borderRadius: "12px",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      color: "#FFF",
+                      fontSize: "14px",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>Review Text</label>
+                  <textarea
+                    value={newReviewText}
+                    onChange={(e) => setNewReviewText(e.target.value)}
+                    placeholder="Tell us what you think of this product"
+                    required
+                    rows={4}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      borderRadius: "12px",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      color: "#FFF",
+                      fontSize: "14px",
+                      resize: "vertical",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  style={{
+                    alignSelf: "flex-start",
+                    backgroundColor: "#FFE5D4",
+                    color: "#2F3E2F",
+                    border: "none",
+                    borderRadius: "16px",
+                    padding: "12px 24px",
+                    fontWeight: 900,
+                    fontSize: "14px",
+                    cursor: submittingReview ? "not-allowed" : "pointer",
+                    opacity: submittingReview ? 0.7 : 1,
+                    transition: "opacity 0.2s",
+                  }}
+                >
+                  {submittingReview ? "Submitting..." : "Submit Review"}
+                </button>
+              </div>
+            </form>
+          )}
 
           {reviews.length === 0 ? (
             <p style={{ color: "rgba(255,255,255,0.65)" }}>

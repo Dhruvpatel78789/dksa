@@ -49,6 +49,7 @@ type Product = {
   }[];
   isPromoted?: boolean;
   promoDescription?: string;
+  promoRating?: number;
 };
 
 type Order = {
@@ -138,6 +139,7 @@ export default function AdminPage() {
   const [promoDescriptionMap, setPromoDescriptionMap] = useState<
     Record<string, string>
   >({});
+  const [promoRatingMap, setPromoRatingMap] = useState<Record<string, string>>({});
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
@@ -228,14 +230,17 @@ export default function AdminPage() {
 
       const promoMap: Record<string, boolean> = {};
       const descriptionMap: Record<string, string> = {};
+      const ratingMap: Record<string, string> = {};
 
       productsData.forEach((item) => {
         promoMap[item._id] = item.isPromoted || false;
         descriptionMap[item._id] = item.promoDescription || "";
+        ratingMap[item._id] = item.promoRating ? String(item.promoRating) : "5.0";
       });
 
       setPromotionMap(promoMap);
       setPromoDescriptionMap(descriptionMap);
+      setPromoRatingMap(ratingMap);
     } finally {
       setIsLoadingProducts(false);
     }
@@ -593,6 +598,7 @@ export default function AdminPage() {
           body: JSON.stringify({
             isPromoted: promotionMap[id] || false,
             promoDescription: promoDescriptionMap[id] || "",
+            promoRating: parseFloat(promoRatingMap[id]) || 5.0,
           }),
         });
 
@@ -639,6 +645,25 @@ export default function AdminPage() {
       }
 
       showToast("success", "Home page selection saved.");
+      await loadReviews();
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function deleteReview(id: string) {
+    if (!confirm("Are you sure you want to delete this review?")) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/admin/reviews/${id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        showToast("error", data.error || "Failed to delete review.");
+        return;
+      }
+      showToast("success", "Review deleted successfully.");
       await loadReviews();
     } finally {
       setIsSaving(false);
@@ -982,13 +1007,19 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>Product optional</label>
-                    <input
+                    <label style={labelStyle}>Product (optional)</label>
+                    <select
                       value={product}
                       onChange={(e) => setProduct(e.target.value)}
-                      placeholder="Product name"
                       style={inputStyle}
-                    />
+                    >
+                      <option value="">-- Select Product --</option>
+                      {products.map((p) => (
+                        <option key={p._id} value={p.name}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div style={{ gridColumn: "1 / -1" }}>
@@ -1024,13 +1055,19 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>Product optional</label>
-                    <input
+                    <label style={labelStyle}>Product (optional)</label>
+                    <select
                       value={product}
                       onChange={(e) => setProduct(e.target.value)}
-                      placeholder="Product name"
                       style={inputStyle}
-                    />
+                    >
+                      <option value="">-- Select Product --</option>
+                      {products.map((p) => (
+                        <option key={p._id} value={p.name}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               )}
@@ -1573,6 +1610,24 @@ export default function AdminPage() {
                             minHeight: "90px",
                             resize: "vertical",
                           }}
+                        />
+
+                        <label style={{ ...labelStyle, marginTop: "12px" }}>Promotion Rating (e.g. 4.5 or 5)</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="5"
+                          value={promoRatingMap[item._id] || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setPromoRatingMap((prev) => ({
+                              ...prev,
+                              [item._id]: value,
+                            }));
+                          }}
+                          placeholder="e.g. 4.5"
+                          style={inputStyle}
                         />
                       </article>
                     );
@@ -2167,6 +2222,25 @@ export default function AdminPage() {
                             Product: {item.product}
                           </p>
                         )}
+
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            marginTop: "16px",
+                          }}
+                        >
+                          <button
+                            onClick={() => deleteReview(item._id)}
+                            style={{
+                              ...dangerButtonStyle,
+                              padding: "8px 16px",
+                              fontSize: "13px",
+                            }}
+                          >
+                            Delete Review
+                          </button>
+                        </div>
                       </article>
                     );
                   })}

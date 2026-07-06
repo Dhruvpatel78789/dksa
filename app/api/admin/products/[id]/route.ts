@@ -144,6 +144,10 @@ export async function PATCH(request: Request, { params }: Params) {
       updateData.promoDescription = String(body.promoDescription || "").trim();
     }
 
+    if (body.promoRating !== undefined) {
+      updateData.promoRating = Number(body.promoRating || 5.0);
+    }
+
     const client = await clientPromise;
     const db = client.db("medtech");
 

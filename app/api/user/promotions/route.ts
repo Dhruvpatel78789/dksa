@@ -13,6 +13,7 @@ export async function GET() {
         name: 1,
         photos: 1,
         promoDescription: 1,
+        promoRating: 1,
       })
       .toArray();
 
@@ -22,6 +23,7 @@ export async function GET() {
         name: product.name,
         image: product.photos?.[0] || "",
         promoDescription: product.promoDescription || "",
+        promoRating: product.promoRating || 5.0,
       })),
     });
   } catch (error) {
