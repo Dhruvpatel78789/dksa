@@ -670,6 +670,28 @@ export default function AdminPage() {
     }
   }
 
+  async function updateReviewProduct(id: string, productName: string) {
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/admin/reviews/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ product: productName }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        showToast("error", data.error || "Failed to update product assignment.");
+        return;
+      }
+      showToast("success", "Review product assignment updated.");
+      await loadReviews();
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function createCoupon() {
     if (!couponCode.trim()) {
       showToast("error", "Coupon code is required.");
@@ -2211,17 +2233,27 @@ export default function AdminPage() {
                           </>
                         )}
 
-                        {item.product && (
-                          <p
+                        <div style={{ marginTop: "14px" }}>
+                          <label style={{ ...labelStyle, fontSize: "12px", marginBottom: "4px" }}>Assigned Product</label>
+                          <select
+                            value={item.product || ""}
+                            onChange={(e) => updateReviewProduct(item._id, e.target.value)}
                             style={{
-                              marginTop: "14px",
-                              color: "#6B705C",
-                              fontSize: "14px",
+                              ...inputStyle,
+                              padding: "6px 10px",
+                              borderRadius: "8px",
+                              fontSize: "13px",
+                              backgroundColor: "#FAF9F6",
                             }}
                           >
-                            Product: {item.product}
-                          </p>
-                        )}
+                            <option value="">-- Unassigned / General --</option>
+                            {products.map((p) => (
+                              <option key={p._id} value={p.name}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
                         <div
                           style={{

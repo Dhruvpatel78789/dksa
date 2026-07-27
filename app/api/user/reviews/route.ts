@@ -51,11 +51,27 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, review, product } = body;
+    const { name, review, product, type, mediaUrl } = body;
 
-    if (!name || !name.trim() || !review || !review.trim() || !product || !product.trim()) {
+    const reviewType = type || "text";
+    if (!["text", "image", "video"].includes(reviewType)) {
+      return Response.json({ error: "Invalid review type" }, { status: 400 });
+    }
+
+    if (!product || !product.trim()) {
+      return Response.json({ error: "Product name is required" }, { status: 400 });
+    }
+
+    if (reviewType === "text" && (!name || !name.trim() || !review || !review.trim())) {
       return Response.json(
-        { error: "Name, review text, and product are required." },
+        { error: "Name and review text are required for text reviews." },
+        { status: 400 }
+      );
+    }
+
+    if ((reviewType === "image" || reviewType === "video") && !mediaUrl) {
+      return Response.json(
+        { error: "Media URL is required for image or video reviews." },
         { status: 400 }
       );
     }
@@ -64,11 +80,11 @@ export async function POST(request: Request) {
     const db = client.db("medtech");
 
     await db.collection("reviews").insertOne({
-      name: name.trim(),
-      review: review.trim(),
+      name: name?.trim() || null,
+      review: review?.trim() || null,
       product: product.trim(),
-      type: "text",
-      mediaUrl: null,
+      type: reviewType,
+      mediaUrl: mediaUrl || null,
       isSelectedForHome: false,
       createdAt: new Date(),
     });

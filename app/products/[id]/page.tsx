@@ -53,18 +53,44 @@ export default function ProductPage() {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [newReviewName, setNewReviewName] = useState("");
   const [newReviewText, setNewReviewText] = useState("");
+  const [reviewType, setReviewType] = useState<"text" | "image" | "video">("text");
+  const [reviewFile, setReviewFile] = useState<File | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
 
   async function submitProductReview(e: React.FormEvent) {
     e.preventDefault();
     if (!product) return;
-    if (!newReviewName.trim() || !newReviewText.trim()) {
+
+    if (reviewType === "text" && (!newReviewName.trim() || !newReviewText.trim())) {
       alert("Please fill in both name and review text.");
+      return;
+    }
+
+    if (reviewType !== "text" && !reviewFile) {
+      alert("Please upload a file.");
       return;
     }
 
     setSubmittingReview(true);
     try {
+      let mediaUrl = "";
+      if (reviewType !== "text" && reviewFile) {
+        const formData = new FormData();
+        formData.append("file", reviewFile);
+        
+        const uploadRes = await fetch("/api/user/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok || uploadData.error) {
+          alert(uploadData.error || "Failed to upload file");
+          return;
+        }
+        mediaUrl = uploadData.url;
+      }
+
       const res = await fetch("/api/user/reviews", {
         method: "POST",
         headers: {
@@ -74,6 +100,8 @@ export default function ProductPage() {
           name: newReviewName,
           review: newReviewText,
           product: product.name,
+          type: reviewType,
+          mediaUrl,
         }),
       });
 
@@ -85,6 +113,8 @@ export default function ProductPage() {
 
       setNewReviewName("");
       setNewReviewText("");
+      setReviewFile(null);
+      setReviewType("text");
       setShowReviewForm(false);
       alert("Thank you! Your review has been submitted.");
 
@@ -709,13 +739,72 @@ export default function ProductPage() {
               <h3 style={{ margin: "0 0 16px", color: "#FFE5D4", fontSize: "20px", fontWeight: 700 }}>Share Your Experience</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div>
-                  <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>Your Name</label>
+                  <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>Review Type</label>
+                  <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
+                    {(["text", "image", "video"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          setReviewType(t);
+                          setReviewFile(null);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: "10px",
+                          borderRadius: "10px",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          backgroundColor: reviewType === t ? "#FFE5D4" : "rgba(255,255,255,0.05)",
+                          color: reviewType === t ? "#2F3E2F" : "#FFF",
+                          fontWeight: 900,
+                          fontSize: "13px",
+                          textTransform: "capitalize",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {reviewType !== "text" && (
+                  <div>
+                    <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>
+                      Upload {reviewType === "image" ? "Image" : "Video"}
+                    </label>
+                    <input
+                      type="file"
+                      accept={reviewType === "image" ? "image/*" : "video/*"}
+                      onChange={(e) => {
+                        if (e.target.files) setReviewFile(e.target.files[0]);
+                      }}
+                      required
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "12px",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                        color: "#FFF",
+                        fontSize: "14px",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>
+                    Your Name {reviewType !== "text" && "(Optional)"}
+                  </label>
                   <input
                     type="text"
                     value={newReviewName}
                     onChange={(e) => setNewReviewName(e.target.value)}
                     placeholder="Enter your name"
-                    required
+                    required={reviewType === "text"}
                     style={{
                       width: "100%",
                       padding: "12px",
@@ -728,13 +817,16 @@ export default function ProductPage() {
                     }}
                   />
                 </div>
+
                 <div>
-                  <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>Review Text</label>
+                  <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>
+                    Review Text {reviewType !== "text" && "(Optional)"}
+                  </label>
                   <textarea
                     value={newReviewText}
                     onChange={(e) => setNewReviewText(e.target.value)}
-                    placeholder="Tell us what you think of this product"
-                    required
+                    placeholder={reviewType === "text" ? "Tell us what you think of this product" : "Add a caption/comment for your review (optional)"}
+                    required={reviewType === "text"}
                     rows={4}
                     style={{
                       width: "100%",

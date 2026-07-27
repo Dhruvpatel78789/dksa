@@ -44,3 +44,43 @@ export async function DELETE(request: Request, { params }: Params) {
     return Response.json({ error: "Server error" }, { status: 500 });
   }
 }
+
+export async function PATCH(request: Request, { params }: Params) {
+  try {
+    const token = (await cookies()).get("token")?.value;
+
+    if (!token) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded: any = verifyToken(token);
+    if (decoded.role !== "admin") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = await params;
+    if (!ObjectId.isValid(id)) {
+      return Response.json({ error: "Invalid review ID" }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const { product } = body;
+
+    const client = await clientPromise;
+    const db = client.db("medtech");
+
+    const result = await db.collection("reviews").updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { product: product?.trim() || null } }
+    );
+
+    if (result.matchedCount === 0) {
+      return Response.json({ error: "Review not found" }, { status: 404 });
+    }
+
+    return Response.json({ message: "Review updated successfully" });
+  } catch (error) {
+    console.error("PATCH REVIEW ERROR:", error);
+    return Response.json({ error: "Server error" }, { status: 500 });
+  }
+}
