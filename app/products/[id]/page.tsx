@@ -1171,7 +1171,8 @@ const reviewMediaStyle: React.CSSProperties = {
   width: "100%",
   height: "auto",
   aspectRatio: "9 / 16",
-  objectFit: "cover",
+  objectFit: "contain",
+  backgroundColor: "rgba(0, 0, 0, 0.04)",
   borderRadius: 24,
   marginBottom: 14,
 };
