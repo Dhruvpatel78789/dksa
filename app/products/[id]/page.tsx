@@ -1169,7 +1169,8 @@ const sectionBodyStyle: React.CSSProperties = {
 
 const reviewMediaStyle: React.CSSProperties = {
   width: "100%",
-  height: 220,
+  height: "auto",
+  aspectRatio: "9 / 16",
   objectFit: "cover",
   borderRadius: 24,
   marginBottom: 14,
