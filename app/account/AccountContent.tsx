@@ -54,6 +54,101 @@ export default function AccountContent() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verifyPhoneNum, setVerifyPhoneNum] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [phoneOtp, setPhoneOtp] = useState("");
+
+  const verifiedParam = searchParams.get("verified");
+  const errorParam = searchParams.get("error");
+
+  useEffect(() => {
+    if (verifiedParam === "email") {
+      setMessage("Email verified successfully! Previous orders have been linked.");
+    } else if (errorParam) {
+      setMessage(decodeURIComponent(errorParam));
+    }
+  }, [verifiedParam, errorParam]);
+
+  async function resendEmailVerification() {
+    try {
+      setSendingVerification(true);
+      setMessage("");
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "Failed to resend verification email");
+      } else {
+        setMessage(data.message || "Verification email sent!");
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage("Error resending email verification");
+    } finally {
+      setSendingVerification(false);
+    }
+  }
+
+  async function requestPhoneOtp() {
+    if (!verifyPhoneNum.trim()) {
+      setMessage("Please enter a phone number");
+      return;
+    }
+    try {
+      setSendingVerification(true);
+      setMessage("");
+      const res = await fetch("/api/auth/verify-phone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "request", phone: verifyPhoneNum }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "Failed to send OTP");
+      } else {
+        setOtpSent(true);
+        setMessage(data.message || "OTP sent successfully!");
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage("Error requesting OTP");
+    } finally {
+      setSendingVerification(false);
+    }
+  }
+
+  async function submitPhoneOtp() {
+    if (!phoneOtp.trim()) {
+      setMessage("Please enter the verification code");
+      return;
+    }
+    try {
+      setSendingVerification(true);
+      setMessage("");
+      const res = await fetch("/api/auth/verify-phone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify", code: phoneOtp }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "Invalid code");
+      } else {
+        setMessage(data.message || "Phone verified successfully!");
+        setOtpSent(false);
+        setPhoneOtp("");
+        await checkAuthAndLoad();
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage("Error verifying OTP");
+    } finally {
+      setSendingVerification(false);
+    }
+  }
+
   async function loadOrders() {
     try {
       const res = await fetch("/api/orders", {
@@ -347,14 +442,126 @@ export default function AccountContent() {
                     <p
                     style={{
                         color: "rgba(255,255,255,0.65)",
+                        marginBottom: 20,
                     }}
                     >
                     {user.email}
                     </p>
 
-                    <button onClick={logout} style={primaryBtn}>
+                    <button onClick={logout} style={{ ...primaryBtn, marginBottom: 20 }}>
                     Logout
                     </button>
+
+                    {/* Verification Section */}
+                    <div style={{ marginTop: 24, padding: 20, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 24, backgroundColor: "rgba(255,255,255,0.03)", boxSizing: "border-box", width: "100%" }}>
+                      <h3 style={{ margin: "0 0 16px", fontSize: 20, letterSpacing: "-0.04em" }}>Account Verification</h3>
+                      
+                      {/* Email Verification */}
+                      <div style={{ marginBottom: 20 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+                          <span>Email: <strong>{user.email}</strong></span>
+                          <span style={{
+                            padding: "4px 10px",
+                            borderRadius: 999,
+                            fontSize: 12,
+                            fontWeight: "bold",
+                            backgroundColor: user.isEmailVerified ? "#2F3E2F" : "#5c3d2e",
+                            color: "#fff"
+                          }}>
+                            {user.isEmailVerified ? "Verified" : "Unverified"}
+                          </span>
+                        </div>
+                        {!user.isEmailVerified && (
+                          <button 
+                            onClick={resendEmailVerification}
+                            disabled={sendingVerification}
+                            style={{
+                              background: "rgba(255,255,255,0.1)",
+                              border: "none",
+                              color: "#fff",
+                              padding: "8px 16px",
+                              borderRadius: 999,
+                              cursor: "pointer",
+                              fontSize: 13,
+                              fontWeight: "bold"
+                            }}
+                          >
+                            {sendingVerification ? "Sending..." : "Resend Verification Email"}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Phone Verification */}
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+                          <span>Phone: <strong>{user.phone || "Not set"}</strong></span>
+                          <span style={{
+                            padding: "4px 10px",
+                            borderRadius: 999,
+                            fontSize: 12,
+                            fontWeight: "bold",
+                            backgroundColor: user.isPhoneVerified ? "#2F3E2F" : "#5c3d2e",
+                            color: "#fff"
+                          }}>
+                            {user.isPhoneVerified ? "Verified" : "Unverified"}
+                          </span>
+                        </div>
+                        
+                        {!user.isPhoneVerified && (
+                          <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+                            {!otpSent ? (
+                              <div style={{ display: "flex", gap: 10 }}>
+                                <input
+                                  placeholder="Enter phone (e.g. 9876543210)"
+                                  value={verifyPhoneNum}
+                                  onChange={(e) => setVerifyPhoneNum(e.target.value)}
+                                  style={{ ...inputStyle, padding: "10px 14px", flex: 1, backgroundColor: "#fff", color: "#111" }}
+                                />
+                                <button
+                                  onClick={requestPhoneOtp}
+                                  disabled={sendingVerification}
+                                  style={{
+                                    border: "none",
+                                    borderRadius: 999,
+                                    padding: "10px 18px",
+                                    backgroundColor: "#FFE5D4",
+                                    color: "#111",
+                                    fontWeight: 900,
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  Send OTP
+                                </button>
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", gap: 10 }}>
+                                <input
+                                  placeholder="Enter 6-digit OTP"
+                                  value={phoneOtp}
+                                  onChange={(e) => setPhoneOtp(e.target.value)}
+                                  style={{ ...inputStyle, padding: "10px 14px", flex: 1, backgroundColor: "#fff", color: "#111" }}
+                                />
+                                <button
+                                  onClick={submitPhoneOtp}
+                                  disabled={sendingVerification}
+                                  style={{
+                                    border: "none",
+                                    borderRadius: 999,
+                                    padding: "10px 18px",
+                                    backgroundColor: "#FFE5D4",
+                                    color: "#111",
+                                    fontWeight: 900,
+                                    cursor: "pointer"
+                                  }}
+                                >
+                                  Verify OTP
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
                     <div style={{ marginTop: 42 }}>
                     <p style={{ margin: 0, opacity: 0.6, fontWeight: 900 }}>

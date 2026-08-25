@@ -3,6 +3,7 @@ import clientPromise from "@/lib/mongodb";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
+import { normalizeEmail, normalizePhone } from "@/lib/normalize";
 
 function generatePayUHash({
   key,
@@ -29,19 +30,66 @@ function generatePayUHash({
 export async function POST(request: Request) {
   try {
     const token = (await cookies()).get("token")?.value;
+    let userId: string | null = null;
+    let user: any = null;
 
-    if (!token) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (token) {
+      try {
+        const decoded: any = verifyToken(token);
+        userId = decoded.userId;
+      } catch (err) {
+        // treat as guest
+      }
     }
 
-    const decoded: any = verifyToken(token);
     const body = await request.json();
-
     const address = body.address;
     const discountCode = String(body.discountCode || "").trim().toUpperCase();
 
     if (!address) {
       return Response.json({ error: "Address is required" }, { status: 400 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db("medtech");
+
+    // Guest vs. Logged in customer checks
+    if (userId) {
+      user = await db.collection("users").findOne({
+        _id: new ObjectId(userId),
+      });
+
+      if (!user) {
+        return Response.json({ error: "User not found" }, { status: 404 });
+      }
+    } else {
+      // Backend validation of guest fields
+      const { fullName, email, phone, line1, city, state, pincode } = address;
+      if (!fullName || !String(fullName).trim()) {
+        return Response.json({ error: "Full Name is required" }, { status: 400 });
+      }
+      if (!email || !String(email).trim()) {
+        return Response.json({ error: "Email is required" }, { status: 400 });
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(String(email).trim())) {
+        return Response.json({ error: "Invalid email format" }, { status: 400 });
+      }
+      if (!phone || !String(phone).trim()) {
+        return Response.json({ error: "Phone number is required" }, { status: 400 });
+      }
+      if (!line1 || !String(line1).trim()) {
+        return Response.json({ error: "Address Line 1 is required" }, { status: 400 });
+      }
+      if (!city || !String(city).trim()) {
+        return Response.json({ error: "City is required" }, { status: 400 });
+      }
+      if (!state || !String(state).trim()) {
+        return Response.json({ error: "State is required" }, { status: 400 });
+      }
+      if (!pincode || !String(pincode).trim()) {
+        return Response.json({ error: "Pincode is required" }, { status: 400 });
+      }
     }
 
     const key = process.env.PAYU_KEY!;
@@ -56,20 +104,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const client = await clientPromise;
-    const db = client.db("medtech");
+    let cart = null;
+    let guestCartId: string | null = null;
 
-    const user = await db.collection("users").findOne({
-      _id: new ObjectId(decoded.userId),
-    });
-
-    if (!user) {
-      return Response.json({ error: "User not found" }, { status: 404 });
+    if (userId) {
+      cart = await db.collection("carts").findOne({
+        userId,
+      });
+    } else {
+      guestCartId = (await cookies()).get("guest_cart_id")?.value || null;
+      if (!guestCartId) {
+        return Response.json({ error: "Cart is empty" }, { status: 400 });
+      }
+      cart = await db.collection("carts").findOne({
+        guestCartId,
+      });
     }
-
-    const cart = await db.collection("carts").findOne({
-      userId: decoded.userId,
-    });
 
     const items = cart?.items || [];
 
@@ -171,10 +221,41 @@ export async function POST(request: Request) {
     const total = Math.max(0, subtotal - safeDiscountAmount);
     const amount = total.toFixed(2);
 
+    const isGuestOrder = !userId;
+    const customerEmail = userId ? user.email : address.email;
+    const customerName = userId ? user.name : address.fullName;
+    const customerPhone = address.phone;
+
+    const emailNormalized = normalizeEmail(customerEmail);
+    const phoneNormalized = normalizePhone(customerPhone);
+
+    const customer = {
+      name: customerName,
+      email: customerEmail,
+      emailNormalized,
+      phone: customerPhone,
+      phoneNormalized,
+    };
+
+    const shippingAddress = {
+      name: address.fullName || address.name || customerName,
+      phone: address.phone || customerPhone,
+      addressLine1: address.line1 || address.addressLine1 || "",
+      addressLine2: address.line2 || address.addressLine2 || "",
+      city: address.city || "",
+      state: address.state || "",
+      pincode: address.pincode || "",
+    };
+
     const orderResult = await db.collection("orders").insertOne({
-      userId: decoded.userId,
-      userName: user.name || "",
-      userEmail: user.email || "",
+      userId: userId || null,
+      guestCartId: userId ? null : guestCartId,
+      isGuestOrder,
+      customer,
+      shippingAddress,
+
+      userName: customerName || "",
+      userEmail: customerEmail || "",
 
       items,
       address,
@@ -215,9 +296,9 @@ export async function POST(request: Request) {
     );
 
     const productinfo = items.map((item: any) => item.name).join(", ");
-    const firstname = user.name || address.fullName || "Customer";
-    const email = user.email || "customer@example.com";
-    const phone = address.phone || "9999999999";
+    const firstname = customerName || "Customer";
+    const email = customerEmail || "customer@example.com";
+    const phone = customerPhone || "9999999999";
 
     const hash = generatePayUHash({
       key,

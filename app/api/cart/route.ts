@@ -2,6 +2,7 @@ import clientPromise from "@/lib/mongodb";
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
+import crypto from "crypto";
 
 type CartItem = {
   productId: string;
@@ -18,23 +19,42 @@ type CartItem = {
 export async function GET() {
   try {
     const token = (await cookies()).get("token")?.value;
+    let userId: string | null = null;
 
-    if (!token) {
-      return Response.json({ items: [] });
+    if (token) {
+      try {
+        const decoded: any = verifyToken(token);
+        userId = decoded.userId;
+      } catch (err) {
+        // Ignore and treat as guest
+      }
     }
-
-    const decoded: any = verifyToken(token);
 
     const client = await clientPromise;
     const db = client.db("medtech");
 
-    const cart = await db.collection("carts").findOne({
-      userId: decoded.userId,
-    });
+    if (userId) {
+      const cart = await db.collection("carts").findOne({
+        userId,
+      });
 
-    return Response.json({
-      items: cart?.items || [],
-    });
+      return Response.json({
+        items: cart?.items || [],
+      });
+    } else {
+      const guestCartId = (await cookies()).get("guest_cart_id")?.value;
+      if (!guestCartId) {
+        return Response.json({ items: [] });
+      }
+
+      const cart = await db.collection("carts").findOne({
+        guestCartId,
+      });
+
+      return Response.json({
+        items: cart?.items || [],
+      });
+    }
   } catch (error) {
     console.error("GET CART ERROR:", error);
 
@@ -48,15 +68,27 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const token = (await cookies()).get("token")?.value;
+    let userId: string | null = null;
+    let guestCartId: string | null = null;
+    let newGuestCartSet = false;
 
-    if (!token) {
-      return Response.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    if (token) {
+      try {
+        const decoded: any = verifyToken(token);
+        userId = decoded.userId;
+      } catch (err) {
+        // Ignore and treat as guest
+      }
     }
 
-    const decoded: any = verifyToken(token);
+    if (!userId) {
+      guestCartId = (await cookies()).get("guest_cart_id")?.value;
+      if (!guestCartId) {
+        guestCartId = crypto.randomUUID();
+        newGuestCartSet = true;
+      }
+    }
+
     const body = await request.json();
 
     const productId = String(body.productId || "");
@@ -91,9 +123,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingCart = await db.collection("carts").findOne({
-      userId: decoded.userId,
-    });
+    const query = userId ? { userId } : { guestCartId };
+    const existingCart = await db.collection("carts").findOne(query);
 
     const items: CartItem[] = Array.isArray(existingCart?.items)
       ? existingCart.items
@@ -150,26 +181,39 @@ export async function POST(request: Request) {
       });
     }
 
+    const updateFields: any = {
+      items,
+      updatedAt: new Date(),
+    };
+    if (userId) {
+      updateFields.userId = userId;
+    } else {
+      updateFields.guestCartId = guestCartId;
+    }
+
     await db.collection("carts").updateOne(
+      query,
       {
-        userId: decoded.userId,
-      },
-      {
-        $set: {
-          userId: decoded.userId,
-          items,
-          updatedAt: new Date(),
-        },
+        $set: updateFields,
       },
       {
         upsert: true,
       }
     );
 
-    return Response.json({
+    const response = Response.json({
       success: true,
       items,
     });
+
+    if (newGuestCartSet && guestCartId) {
+      response.headers.set(
+        "Set-Cookie",
+        `guest_cart_id=${guestCartId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+      );
+    }
+
+    return response;
   } catch (error) {
     console.error("POST CART ERROR:", error);
 

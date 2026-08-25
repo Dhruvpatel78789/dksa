@@ -5,15 +5,27 @@ import { verifyToken } from "@/lib/auth";
 export async function POST(request: Request) {
   try {
     const token = (await cookies()).get("token")?.value;
+    let userId: string | null = null;
+    let guestCartId: string | null = null;
 
-    if (!token) {
-      return Response.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    if (token) {
+      try {
+        const decoded: any = verifyToken(token);
+        userId = decoded.userId;
+      } catch (err) {
+        // treat as guest
+      }
     }
 
-    const decoded: any = verifyToken(token);
+    if (!userId) {
+      guestCartId = (await cookies()).get("guest_cart_id")?.value;
+      if (!guestCartId) {
+        return Response.json(
+          { error: "Guest cart not found" },
+          { status: 404 }
+        );
+      }
+    }
 
     const body = await request.json();
 
@@ -24,15 +36,16 @@ export async function POST(request: Request) {
     const client = await clientPromise;
     const db = client.db("medtech");
 
+    const query = userId ? { userId } : { guestCartId };
+    const updateObj = userId ? { userId, items, updatedAt: new Date() } : { guestCartId, items, updatedAt: new Date() };
+
     await db.collection("carts").updateOne(
+      query,
       {
-        userId: decoded.userId,
+        $set: updateObj,
       },
       {
-        $set: {
-          items,
-          updatedAt: new Date(),
-        },
+        upsert: true,
       }
     );
 

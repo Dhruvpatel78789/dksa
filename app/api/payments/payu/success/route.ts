@@ -80,15 +80,21 @@ export async function POST(request: Request) {
         }
       }
 
-      await db.collection("carts").updateOne(
-        { userId: order.userId },
-        {
-          $set: {
-            items: [],
-            updatedAt: new Date(),
-          },
-        }
-      );
+      const cartQuery = order.userId
+        ? { userId: order.userId }
+        : { guestCartId: order.guestCartId };
+
+      if (cartQuery.userId || cartQuery.guestCartId) {
+        await db.collection("carts").updateOne(
+          cartQuery,
+          {
+            $set: {
+              items: [],
+              updatedAt: new Date(),
+            },
+          }
+        );
+      }
 
       return Response.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/order-success?orderId=${order._id.toString()}`

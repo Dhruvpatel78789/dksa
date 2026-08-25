@@ -89,14 +89,14 @@ export default function FloatingActions() {
       </div>
 
       {/* MOBILE LEFT BACK */}
-      <div className="flex md:hidden fixed top-[18px] left-[18px] z-[9999]">
+      <div className="flex md:hidden fixed top-[12px] left-[12px] z-[9999]">
         <button onClick={() => router.back()} style={iconStyle}>
           ←
         </button>
       </div>
 
       {/* MOBILE */}
-      <div className="flex md:hidden fixed top-[18px] right-[18px] z-[9999] flex-col items-end gap-2.5">
+      <div className="flex md:hidden fixed top-[12px] right-[12px] z-[9999] flex-col items-end gap-2.5">
         <button
           onClick={() => setOpen((prev) => !prev)}
           style={{

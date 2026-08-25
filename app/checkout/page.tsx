@@ -44,22 +44,24 @@ export default function CheckoutPage() {
 
   const isMobile = mounted ? isMobileRaw : false;
 
+  const [user, setUser] = useState<any>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [couponCode, setCouponCode] = useState("");
-    const [appliedCoupon, setAppliedCoupon] = useState<{
+  const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
     discountType: "percentage" | "fixed";
     discountValue: number;
     discountAmount: number;
-    } | null>(null);
-    const [couponMessage, setCouponMessage] = useState("");
+  } | null>(null);
+  const [couponMessage, setCouponMessage] = useState("");
 
   const [form, setForm] = useState({
     fullName: "",
+    email: "",
     phone: "",
     line1: "",
     line2: "",
@@ -83,21 +85,29 @@ export default function CheckoutPage() {
 
   async function loadData() {
     try {
+      const userRes = await fetch("/api/auth/me", { cache: "no-store" });
+      const userData = await userRes.json();
+      setUser(userData.user);
+
       const cartRes = await fetch("/api/cart", { cache: "no-store" });
       const cartData = await cartRes.json();
       setCart(cartData.items || []);
 
-      const addressRes = await fetch("/api/user/addresses", {
-        cache: "no-store",
-      });
+      if (userData.user) {
+        const addressRes = await fetch("/api/user/addresses", {
+          cache: "no-store",
+        });
 
-      const addressData = await addressRes.json();
-      const addressList = addressData.addresses || [];
+        const addressData = await addressRes.json();
+        const addressList = addressData.addresses || [];
 
-      setAddresses(addressList);
+        setAddresses(addressList);
 
-      if (addressList.length > 0) {
-        setSelectedAddressId((prev) => prev || addressList[0]._id);
+        if (addressList.length > 0) {
+          setSelectedAddressId((prev) => prev || addressList[0]._id);
+        } else {
+          setSelectedAddressId("new");
+        }
       } else {
         setSelectedAddressId("new");
       }
@@ -116,6 +126,7 @@ export default function CheckoutPage() {
       if (activeAddr) {
         setForm({
           fullName: activeAddr.fullName || "",
+          email: "",
           phone: activeAddr.phone || "",
           line1: activeAddr.line1 || "",
           line2: activeAddr.line2 || "",
@@ -127,6 +138,7 @@ export default function CheckoutPage() {
     } else if (selectedAddressId === "new") {
       setForm({
         fullName: "",
+        email: "",
         phone: "",
         line1: "",
         line2: "",
@@ -138,6 +150,7 @@ export default function CheckoutPage() {
   }, [selectedAddressId, addresses]);
 
   async function handleAutoSave(updatedForm: typeof form) {
+    if (!user) return;
     if (!updatedForm.fullName.trim() || !updatedForm.phone.trim() || !updatedForm.line1.trim()) {
       return;
     }
@@ -192,13 +205,62 @@ export default function CheckoutPage() {
   }
 
   async function placeOrder() {
-  const selectedAddress = addresses.find(
-    (address) => address._id === selectedAddressId
-  );
+  let selectedAddress;
 
-  if (!selectedAddress) {
-    alert("Select or add an address first.");
-    return;
+  if (user) {
+    selectedAddress = addresses.find(
+      (address) => address._id === selectedAddressId
+    );
+    if (!selectedAddress) {
+      alert("Select or add an address first.");
+      return;
+    }
+  } else {
+    // Guest checkout validation
+    if (!form.fullName.trim()) {
+      alert("Full Name is required.");
+      return;
+    }
+    if (!form.email.trim()) {
+      alert("Email is required.");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+    if (!form.phone.trim()) {
+      alert("Phone Number is required.");
+      return;
+    }
+    if (!form.line1.trim()) {
+      alert("Address Line 1 is required.");
+      return;
+    }
+    if (!form.city.trim()) {
+      alert("City is required.");
+      return;
+    }
+    if (!form.state.trim()) {
+      alert("State is required.");
+      return;
+    }
+    if (!form.pincode.trim()) {
+      alert("Pincode is required.");
+      return;
+    }
+
+    selectedAddress = {
+      fullName: form.fullName.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      line1: form.line1.trim(),
+      line2: form.line2?.trim() || "",
+      city: form.city.trim(),
+      state: form.state.trim(),
+      pincode: form.pincode.trim(),
+    };
   }
 
   setPlacingOrder(true);
@@ -290,21 +352,17 @@ export default function CheckoutPage() {
       style={{
         minHeight: "100vh",
         backgroundColor: "#F7EFE7",
-        padding: "clamp(88px, 10vw, 120px) clamp(22px, 5vw, 56px) 56px",
         fontFamily: "Arial, sans-serif",
         color: "#111",
-        boxSizing: "border-box",
-        width: "100%",
-        overflowX: "hidden",
       }}
     >
       <FloatingActions />
 
-      <section style={{ maxWidth: 1220, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+      <section className="checkout-section">
         <h1
           style={{
             margin: "0 0 34px",
-            fontSize: "clamp(54px, 10vw, 120px)",
+            fontSize: "clamp(38px, 10vw, 120px)",
             lineHeight: 0.85,
             letterSpacing: "-0.08em",
           }}
@@ -402,6 +460,19 @@ export default function CheckoutPage() {
                   style={inputStyle}
                 />
 
+                {!user && (
+                  <input
+                    placeholder="Email address"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
+                    type="email"
+                    onBlur={() => handleAutoSave(form)}
+                    style={inputStyle}
+                  />
+                )}
+
                 <input
                   placeholder="Phone"
                   value={form.phone}
@@ -469,7 +540,7 @@ export default function CheckoutPage() {
   <h2
     style={{
       margin: "10px 0 24px",
-      fontSize: 54,
+      fontSize: "clamp(32px, 8vw, 54px)",
       lineHeight: 0.9,
       letterSpacing: "-0.07em",
     }}
@@ -491,15 +562,18 @@ export default function CheckoutPage() {
           style={{
             display: "flex",
             justifyContent: "space-between",
+            alignItems: "flex-start",
             gap: 12,
             color: "rgba(255,255,255,0.72)",
+            width: "100%",
           }}
         >
-          <span>
+          <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>
             {item.name} × {item.quantity}
+            {item.size ? ` (${item.size})` : ""}
           </span>
 
-          <strong>
+          <strong style={{ flexShrink: 0 }}>
             ₹{Math.round(discountedPrice * item.quantity)}
           </strong>
         </div>
@@ -512,7 +586,7 @@ export default function CheckoutPage() {
       Coupon
     </p>
 
-    <div style={{ display: "flex", gap: 8 }}>
+    <div className="coupon-row" style={{ display: "flex", gap: 8, width: "100%" }}>
       <input
         value={couponCode}
         onChange={(e) => setCouponCode(e.target.value)}
@@ -537,6 +611,7 @@ export default function CheckoutPage() {
           color: "#111",
           fontWeight: 900,
           cursor: "pointer",
+          flexShrink: 0,
         }}
       >
         Apply
@@ -586,14 +661,16 @@ export default function CheckoutPage() {
     style={{
       display: "flex",
       justifyContent: "space-between",
+      alignItems: "center",
       fontSize: 22,
       marginBottom: 26,
       borderTop: "1px solid rgba(255,255,255,0.18)",
       paddingTop: 16,
+      width: "100%",
     }}
   >
-    <span>Total</span>
-    <strong>₹{Math.round(total)}</strong>
+    <span style={{ flex: 1, minWidth: 0 }}>Total</span>
+    <strong style={{ flexShrink: 0 }}>₹{Math.round(total)}</strong>
   </div>
 
   <button
@@ -618,30 +695,68 @@ export default function CheckoutPage() {
       </section>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        .checkout-main {
+          width: 100%;
+          max-width: 100vw;
+          box-sizing: border-box;
+          margin: 0;
+          padding: 88px 10px 56px;
+          overflow-x: hidden;
+        }
+
+        .checkout-section {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+
         .checkout-grid {
           display: grid;
-          grid-template-columns: 1fr 380px;
-          gap: 28px;
+          grid-template-columns: 1fr;
+          gap: 20px;
+          width: 100%;
+          box-sizing: border-box;
         }
 
         .address-row {
           display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
+          grid-template-columns: 1fr;
           gap: 12px;
+          width: 100%;
+          box-sizing: border-box;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 349px) {
+          .coupon-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+          .coupon-row input {
+            width: 100% !important;
+          }
+          .coupon-row button {
+            width: 100% !important;
+            padding: 12px !important;
+          }
+        }
+
+        @media (min-width: 901px) {
           .checkout-main {
-            padding: 88px 12px 56px !important;
+            padding: clamp(88px, 10vw, 120px) clamp(22px, 5vw, 56px) 56px;
+          }
+
+          .checkout-section {
+            max-width: 1220px;
+            margin: 0 auto;
           }
 
           .checkout-grid {
-            grid-template-columns: 1fr !important;
-            gap: 20px !important;
+            grid-template-columns: 1fr 380px;
+            gap: 28px;
           }
 
           .address-row {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: 1fr 1fr 1fr;
           }
         }
       `}} />
@@ -704,7 +819,7 @@ const summaryStyle: React.CSSProperties = {
   backgroundColor: "#111",
   color: "#fff",
   borderRadius: 36,
-  padding: 28,
+  padding: "clamp(14px, 4vw, 28px)",
   height: "fit-content",
   position: "sticky",
   top: 24,
