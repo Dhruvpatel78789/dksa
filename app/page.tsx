@@ -5,7 +5,7 @@ import { getOptimizedMediaUrl } from "@/lib/media";
 import Link from "next/link";
 import FloatingActions from "./components/FloatingActions";
 
-const FRAME_COUNT = 239;
+const FRAME_COUNT = 191;
 
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(Math.max(value, min), max);
@@ -369,7 +369,7 @@ function FooterLink({ text }: { text: string }) {
 >
 </div>
       {/* SECTION 5: PROMOTED PRODUCTS (Moved to top) */}
-      {(isLoading || (promotions && promotions.length > 0)) && (
+      {promotions && promotions.length > 0 && (
         <section
           ref={promotionRef}
           style={{
@@ -380,309 +380,232 @@ function FooterLink({ text }: { text: string }) {
             overflow: "hidden",
           }}
         >
-          {isLoading || promotions.length === 0 ? (
-            /* Skeleton Loader */
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              transform: `translateX(-${activeSlide * 100}%)`,
+              transition: "transform 1.2s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+          >
+            {promotions.map((item, index) => (
+              <div
+                key={item._id || index}
+                onClick={() => {
+                  window.location.href = `/products/${item._id}`;
+                }}
+                style={{
+                  flex: "0 0 100%",
+                  width: "100vw",
+                  height: "100vh",
+                  position: "relative",
+                  cursor: "pointer",
+                }}
+              >
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
+                />
+
+                {/* Blurred glassmorphism overlay in the bottom portion */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "70%",
+                    backgroundColor: "rgba(0, 0, 0, 0.25)",
+                    backdropFilter: "blur(20px)",
+                    WebkitBackdropFilter: "blur(20px)",
+                    WebkitMaskImage: "linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%)",
+                    maskImage: "linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%)",
+                    pointerEvents: "none",
+                  }}
+                />
+
+                {/* Name & Rating display */}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: isMobile ? "140px" : "150px",
+                    left: isMobile ? "24px" : "64px",
+                    right: isMobile ? "24px" : "64px",
+                    textAlign: "left",
+                    pointerEvents: "none",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px",
+                  }}
+                >
+                  {/* Rating Capsule */}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignSelf: "flex-start",
+                      alignItems: "center",
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: "999px",
+                      padding: "4px 16px 4px 4px",
+                      boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
+                      border: "1px solid rgba(255,255,255,0.5)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: "#81B29A",
+                        color: "#FFFFFF",
+                        padding: "6px 14px",
+                        borderRadius: "999px",
+                        fontSize: "12px",
+                        fontWeight: 900,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "2px",
+                      }}
+                    >
+                      <span>{Number(item.promoRating || 5).toFixed(1)}</span>
+                      <span style={{ fontSize: "10px" }}>★</span>
+                    </div>
+                    <span
+                      style={{
+                        marginLeft: "10px",
+                        color: "#2F3E2F",
+                        fontSize: "10px",
+                        fontWeight: 900,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      AVG. RATING
+                    </span>
+                  </div>
+
+                  <h3
+                    style={{
+                      margin: 0,
+                      color: "#FFE5D4",
+                      fontSize: isMobile ? "32px" : "56px",
+                      fontWeight: 900,
+                      letterSpacing: "-0.04em",
+                      lineHeight: 1.1,
+                      textShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {item.name}
+                  </h3>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Premium Auto Scroll Dots */}
+          {promotions.length > 1 && (
             <div
               style={{
-                width: "100%",
-                height: "100%",
-                position: "relative",
+                position: "absolute",
+                bottom: "90px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                display: "flex",
+                gap: "8px",
+                zIndex: 100,
+              }}
+            >
+              {promotions.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveSlide(i);
+                  }}
+                  style={{
+                    width: i === activeSlide ? "24px" : "8px",
+                    height: "8px",
+                    borderRadius: "4px",
+                    backgroundColor: i === activeSlide ? "#2F3E2F" : "rgba(47, 62, 47, 0.3)",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "width 0.4s ease, background-color 0.4s ease",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Animated Scroll Prompt */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "32px",
+              left: "50%",
+              transform: `translateX(-50%) translateY(${hasScrolled ? "20px" : "0px"})`,
+              opacity: hasScrolled ? 0 : 1,
+              transition: "opacity 0.4s ease, transform 0.4s ease",
+              zIndex: 999,
+              pointerEvents: "none",
+            }}
+          >
+            <div
+              style={{
                 display: "flex",
                 flexDirection: "column",
-                justifyContent: "flex-end",
-                padding: isMobile ? "24px" : "64px",
-                boxSizing: "border-box",
-                backgroundColor: "#E9DED2",
-                animation: "pulse 1.8s infinite ease-in-out",
+                alignItems: "center",
+                gap: "8px",
+                animation: "bounce 2.2s infinite ease-in-out",
               }}
             >
               <div
                 style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  backgroundColor: "rgba(0,0,0,0.03)",
+                  backgroundColor: "rgba(47, 62, 47, 0.95)",
+                  color: "#FFE5D4",
+                  padding: "10px 18px",
+                  borderRadius: "22px",
+                  fontSize: "13px",
+                  fontWeight: 900,
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.14)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  whiteSpace: "nowrap",
                 }}
-              />
-
+              >
+                Scroll down to explore
+              </div>
               <div
                 style={{
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "70%",
-                  backgroundColor: "rgba(0, 0, 0, 0.25)",
-                  backdropFilter: "blur(20px)",
-                  WebkitBackdropFilter: "blur(20px)",
-                  WebkitMaskImage: "linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%)",
-                  maskImage: "linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              <div
-                style={{
+                  width: "24px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  border: "2px solid #2F3E2F",
                   position: "relative",
-                  zIndex: 2,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "14px",
-                  bottom: isMobile ? "116px" : "118px",
-                  left: isMobile ? "0px" : "0px",
+                  backgroundColor: "rgba(255, 229, 212, 0.8)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                 }}
               >
                 <div
                   style={{
-                    width: "150px",
-                    height: "32px",
-                    backgroundColor: "rgba(255, 255, 255, 0.4)",
-                    borderRadius: "999px",
-                  }}
-                />
-                <div
-                  style={{
-                    width: isMobile ? "80%" : "480px",
-                    height: isMobile ? "42px" : "64px",
-                    backgroundColor: "rgba(255, 255, 255, 0.25)",
-                    borderRadius: "16px",
+                    width: "4px",
+                    height: "8px",
+                    backgroundColor: "#2F3E2F",
+                    borderRadius: "2px",
+                    position: "absolute",
+                    top: "6px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    animation: "scrollWheel 1.6s infinite",
                   }}
                 />
               </div>
             </div>
-          ) : (
-            /* Actual promotions slider content */
-            <>
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  display: "flex",
-                  transform: `translateX(-${activeSlide * 100}%)`,
-                  transition: "transform 1.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                }}
-              >
-                {promotions.map((item, index) => (
-                  <div
-                    key={item._id || index}
-                    onClick={() => {
-                      window.location.href = `/products/${item._id}`;
-                    }}
-                    style={{
-                      flex: "0 0 100%",
-                      width: "100vw",
-                      height: "100vh",
-                      position: "relative",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
-
-                    {/* Blurred glassmorphism overlay in the bottom portion */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: 0,
-                        left: 0,
-                        width: "100%",
-                        height: "70%",
-                        backgroundColor: "rgba(0, 0, 0, 0.25)",
-                        backdropFilter: "blur(20px)",
-                        WebkitBackdropFilter: "blur(20px)",
-                        WebkitMaskImage: "linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%)",
-                        maskImage: "linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%)",
-                        pointerEvents: "none",
-                      }}
-                    />
-
-                    {/* Name & Rating display */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: isMobile ? "140px" : "150px",
-                        left: isMobile ? "24px" : "64px",
-                        right: isMobile ? "24px" : "64px",
-                        textAlign: "left",
-                        pointerEvents: "none",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "14px",
-                      }}
-                    >
-                      {/* Rating Capsule */}
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignSelf: "flex-start",
-                          alignItems: "center",
-                          backgroundColor: "#FFFFFF",
-                          borderRadius: "999px",
-                          padding: "4px 16px 4px 4px",
-                          boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
-                          border: "1px solid rgba(255,255,255,0.5)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            backgroundColor: "#81B29A",
-                            color: "#FFFFFF",
-                            padding: "6px 14px",
-                            borderRadius: "999px",
-                            fontSize: "12px",
-                            fontWeight: 900,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "2px",
-                          }}
-                        >
-                          <span>{Number(item.promoRating || 5).toFixed(1)}</span>
-                          <span style={{ fontSize: "10px" }}>★</span>
-                        </div>
-                        <span
-                          style={{
-                            marginLeft: "10px",
-                            color: "#2F3E2F",
-                            fontSize: "10px",
-                            fontWeight: 900,
-                            letterSpacing: "0.08em",
-                            textTransform: "uppercase",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          AVG. RATING
-                        </span>
-                      </div>
-
-                      <h3
-                        style={{
-                          margin: 0,
-                          color: "#FFE5D4",
-                          fontSize: isMobile ? "32px" : "56px",
-                          fontWeight: 900,
-                          letterSpacing: "-0.04em",
-                          lineHeight: 1.1,
-                          textShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                        }}
-                      >
-                        {item.name}
-                      </h3>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Premium Auto Scroll Dots */}
-              {promotions.length > 1 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "90px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    display: "flex",
-                    gap: "8px",
-                    zIndex: 100,
-                  }}
-                >
-                  {promotions.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveSlide(i);
-                      }}
-                      style={{
-                        width: i === activeSlide ? "24px" : "8px",
-                        height: "8px",
-                        borderRadius: "4px",
-                        backgroundColor: i === activeSlide ? "#2F3E2F" : "rgba(47, 62, 47, 0.3)",
-                        border: "none",
-                        cursor: "pointer",
-                        transition: "width 0.4s ease, background-color 0.4s ease",
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Animated Scroll Prompt */}
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: "32px",
-                  left: "50%",
-                  transform: `translateX(-50%) translateY(${hasScrolled ? "20px" : "0px"})`,
-                  opacity: hasScrolled ? 0 : 1,
-                  transition: "opacity 0.4s ease, transform 0.4s ease",
-                  zIndex: 999,
-                  pointerEvents: "none",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "8px",
-                    animation: "bounce 2.2s infinite ease-in-out",
-                  }}
-                >
-                  <div
-                    style={{
-                      backgroundColor: "rgba(47, 62, 47, 0.95)",
-                      color: "#FFE5D4",
-                      padding: "10px 18px",
-                      borderRadius: "22px",
-                      fontSize: "13px",
-                      fontWeight: 900,
-                      boxShadow: "0 10px 30px rgba(0,0,0,0.14)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      letterSpacing: "0.04em",
-                      textTransform: "uppercase",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    Scroll down to explore
-                  </div>
-                  <div
-                    style={{
-                      width: "24px",
-                      height: "40px",
-                      borderRadius: "12px",
-                      border: "2px solid #2F3E2F",
-                      position: "relative",
-                      backgroundColor: "rgba(255, 229, 212, 0.8)",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "4px",
-                        height: "8px",
-                        backgroundColor: "#2F3E2F",
-                        borderRadius: "2px",
-                        position: "absolute",
-                        top: "6px",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        animation: "scrollWheel 1.6s infinite",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
+          </div>
 
           <style>{`
             @keyframes bounce {
@@ -694,10 +617,6 @@ function FooterLink({ text }: { text: string }) {
               30% { opacity: 1; }
               90% { opacity: 0; top: 20px; }
               100% { opacity: 0; top: 6px; }
-            }
-            @keyframes pulse {
-              0%, 100% { opacity: 0.6; }
-              50% { opacity: 1; }
             }
           `}</style>
         </section>
@@ -1189,7 +1108,6 @@ function FooterLink({ text }: { text: string }) {
 
                   {/* PRODUCT IMAGE */}
                   <img
-                    key={product.slug}
                     src={product.image}
                     alt={product.name}
                     style={{

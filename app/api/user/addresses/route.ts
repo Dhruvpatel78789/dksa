@@ -128,3 +128,54 @@ export async function DELETE(request: Request) {
     );
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const token = (await cookies()).get("token")?.value;
+
+    if (!token) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded: any = verifyToken(token);
+    const body = await request.json();
+    const { id, fullName, phone, line1, line2, city, state, pincode } = body;
+
+    if (!id || !ObjectId.isValid(id)) {
+      return Response.json({ error: "Invalid address id" }, { status: 400 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db("medtech");
+
+    const updateFields: any = {
+      updatedAt: new Date(),
+    };
+
+    if (fullName !== undefined) updateFields.fullName = String(fullName || "").trim();
+    if (phone !== undefined) updateFields.phone = String(phone || "").trim();
+    if (line1 !== undefined) updateFields.line1 = String(line1 || "").trim();
+    if (line2 !== undefined) updateFields.line2 = String(line2 || "").trim();
+    if (city !== undefined) updateFields.city = String(city || "").trim();
+    if (state !== undefined) updateFields.state = String(state || "").trim();
+    if (pincode !== undefined) updateFields.pincode = String(pincode || "").trim();
+
+    const result = await db.collection("addresses").updateOne(
+      { _id: new ObjectId(id), userId: decoded.userId },
+      { $set: updateFields }
+    );
+
+    if (result.matchedCount === 0) {
+      return Response.json({ error: "Address not found" }, { status: 404 });
+    }
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("PATCH ADDRESS ERROR:", error);
+
+    return Response.json(
+      { error: "Failed to update address" },
+      { status: 500 }
+    );
+  }
+}

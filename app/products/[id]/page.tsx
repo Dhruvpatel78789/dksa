@@ -151,7 +151,15 @@ export default function ProductPage() {
 
       if (!res.ok) {
         if (res.status === 401) {
-          window.location.href = `/account?next=/products/${product._id}`;
+          localStorage.setItem(
+            "pending_cart_item",
+            JSON.stringify({
+              productId: product._id,
+              quantity,
+              size: selectedSize,
+            })
+          );
+          window.location.href = "/account?next=/cart";
           return;
         }
 

@@ -42,8 +42,38 @@ export default function CartPage() {
     }
   }
 
+  async function processPendingCart() {
+    const pendingItemStr = typeof window !== "undefined" ? localStorage.getItem("pending_cart_item") : null;
+    if (pendingItemStr) {
+      try {
+        const item = JSON.parse(pendingItemStr);
+        const res = await fetch("/api/cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            productId: item.productId,
+            quantity: item.quantity || 1,
+            size: item.size || "",
+          }),
+        });
+        if (res.ok) {
+          localStorage.removeItem("pending_cart_item");
+          window.dispatchEvent(new Event("cartUpdated"));
+        }
+      } catch (e) {
+        console.error("Failed to process pending cart item:", e);
+      }
+    }
+  }
+
   useEffect(() => {
-    loadCart();
+    async function init() {
+      await processPendingCart();
+      await loadCart();
+    }
+    init();
   }, []);
 
   const total = useMemo(() => {

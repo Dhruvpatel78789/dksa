@@ -53,6 +53,19 @@ export default function CheckoutPage() {
     pincode: "",
   });
 
+  const subtotal = useMemo(() => {
+    return cart.reduce((sum, item) => {
+      const discountedPrice =
+        item.discountedPrice !== undefined
+          ? item.discountedPrice
+          : item.price - (item.price * (item.discountPercentage || 0)) / 100;
+
+      return sum + discountedPrice * item.quantity;
+    }, 0);
+  }, [cart]);
+
+  const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
+
   async function loadData() {
     try {
       const cartRes = await fetch("/api/cart", { cache: "no-store" });
@@ -69,7 +82,9 @@ export default function CheckoutPage() {
       setAddresses(addressList);
 
       if (addressList.length > 0) {
-        setSelectedAddressId(addressList[0]._id);
+        setSelectedAddressId((prev) => prev || addressList[0]._id);
+      } else {
+        setSelectedAddressId("new");
       }
     } finally {
       setLoading(false);
@@ -80,46 +95,85 @@ export default function CheckoutPage() {
     loadData();
   }, []);
 
-  const subtotal = useMemo(() => {
-    return cart.reduce((sum, item) => {
-      const discountedPrice =
-        item.discountedPrice !== undefined
-          ? item.discountedPrice
-          : item.price - (item.price * (item.discountPercentage || 0)) / 100;
+  useEffect(() => {
+    if (selectedAddressId && selectedAddressId !== "new") {
+      const activeAddr = addresses.find((a) => a._id === selectedAddressId);
+      if (activeAddr) {
+        setForm({
+          fullName: activeAddr.fullName || "",
+          phone: activeAddr.phone || "",
+          line1: activeAddr.line1 || "",
+          line2: activeAddr.line2 || "",
+          city: activeAddr.city || "",
+          state: activeAddr.state || "",
+          pincode: activeAddr.pincode || "",
+        });
+      }
+    } else if (selectedAddressId === "new") {
+      setForm({
+        fullName: "",
+        phone: "",
+        line1: "",
+        line2: "",
+        city: "",
+        state: "",
+        pincode: "",
+      });
+    }
+  }, [selectedAddressId, addresses]);
 
-      return sum + discountedPrice * item.quantity;
-    }, 0);
-  }, [cart]);
-
-const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
-
-  async function saveAddress() {
-    const res = await fetch("/api/user/addresses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Failed to save address");
+  async function handleAutoSave(updatedForm: typeof form) {
+    if (!updatedForm.fullName.trim() || !updatedForm.phone.trim() || !updatedForm.line1.trim()) {
       return;
     }
 
-    setForm({
-      fullName: "",
-      phone: "",
-      line1: "",
-      line2: "",
-      city: "",
-      state: "",
-      pincode: "",
-    });
+    try {
+      if (selectedAddressId && selectedAddressId !== "new") {
+        const res = await fetch("/api/user/addresses", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: selectedAddressId,
+            ...updatedForm,
+          }),
+        });
+        if (res.ok) {
+          const addressRes = await fetch("/api/user/addresses", { cache: "no-store" });
+          if (addressRes.ok) {
+            const addressData = await addressRes.json();
+            setAddresses(addressData.addresses || []);
+          }
+        }
+      } else {
+        if (!updatedForm.city.trim() || !updatedForm.state.trim() || !updatedForm.pincode.trim()) {
+          return;
+        }
 
-    await loadData();
+        const res = await fetch("/api/user/addresses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatedForm),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.addressId) {
+            const addressRes = await fetch("/api/user/addresses", { cache: "no-store" });
+            if (addressRes.ok) {
+              const addressData = await addressRes.json();
+              setAddresses(addressData.addresses || []);
+            }
+            setSelectedAddressId(data.addressId);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Auto-save address error:", err);
+    }
   }
 
   async function placeOrder() {
@@ -260,16 +314,18 @@ const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
                       style={{
                         border:
                           selectedAddressId === address._id
-                            ? "2px solid #111"
+                            ? "2px solid #2F3E2F"
                             : "1px solid #ddd",
                         borderRadius: 22,
                         padding: 16,
                         cursor: "pointer",
                         display: "block",
+                        backgroundColor: selectedAddressId === address._id ? "rgba(47, 62, 47, 0.04)" : "#fff",
                       }}
                     >
                       <input
                         type="radio"
+                        name="address-select"
                         checked={selectedAddressId === address._id}
                         onChange={() => setSelectedAddressId(address._id)}
                         style={{ marginRight: 10 }}
@@ -286,6 +342,30 @@ const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
                       </p>
                     </label>
                   ))}
+
+                  <label
+                    style={{
+                      border:
+                        selectedAddressId === "new"
+                          ? "2px dashed #2F3E2F"
+                          : "1px dashed #bbb",
+                      borderRadius: 22,
+                      padding: 16,
+                      cursor: "pointer",
+                      display: "block",
+                      backgroundColor: selectedAddressId === "new" ? "rgba(47, 62, 47, 0.04)" : "transparent",
+                      textAlign: "center",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="address-select"
+                      checked={selectedAddressId === "new"}
+                      onChange={() => setSelectedAddressId("new")}
+                      style={{ marginRight: 10 }}
+                    />
+                    <strong>+ Add a new address</strong>
+                  </label>
                 </div>
               )}
 
@@ -296,6 +376,7 @@ const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
                   onChange={(e) =>
                     setForm({ ...form, fullName: e.target.value })
                   }
+                  onBlur={() => handleAutoSave(form)}
                   style={inputStyle}
                 />
 
@@ -303,6 +384,7 @@ const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
                   placeholder="Phone"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onBlur={() => handleAutoSave(form)}
                   style={inputStyle}
                 />
 
@@ -310,6 +392,7 @@ const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
                   placeholder="Address line 1"
                   value={form.line1}
                   onChange={(e) => setForm({ ...form, line1: e.target.value })}
+                  onBlur={() => handleAutoSave(form)}
                   style={inputStyle}
                 />
 
@@ -317,6 +400,7 @@ const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
                   placeholder="Address line 2 optional"
                   value={form.line2}
                   onChange={(e) => setForm({ ...form, line2: e.target.value })}
+                  onBlur={() => handleAutoSave(form)}
                   style={inputStyle}
                 />
 
@@ -334,6 +418,7 @@ const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
                     onChange={(e) =>
                       setForm({ ...form, city: e.target.value })
                     }
+                    onBlur={() => handleAutoSave(form)}
                     style={inputStyle}
                   />
 
@@ -343,6 +428,7 @@ const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
                     onChange={(e) =>
                       setForm({ ...form, state: e.target.value })
                     }
+                    onBlur={() => handleAutoSave(form)}
                     style={inputStyle}
                   />
 
@@ -352,13 +438,10 @@ const total = Math.max(0, subtotal - (appliedCoupon?.discountAmount || 0));
                     onChange={(e) =>
                       setForm({ ...form, pincode: e.target.value })
                     }
+                    onBlur={() => handleAutoSave(form)}
                     style={inputStyle}
                   />
                 </div>
-
-                <button onClick={saveAddress} style={darkButtonStyle}>
-                  Save Address
-                </button>
               </div>
             </section>
           </div>
