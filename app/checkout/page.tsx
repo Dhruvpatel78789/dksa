@@ -286,6 +286,7 @@ export default function CheckoutPage() {
 
   return (
     <main
+      className="checkout-main"
       style={{
         minHeight: "100vh",
         backgroundColor: "#F7EFE7",
@@ -293,11 +294,13 @@ export default function CheckoutPage() {
         fontFamily: "Arial, sans-serif",
         color: "#111",
         boxSizing: "border-box",
+        width: "100%",
+        overflowX: "hidden",
       }}
     >
       <FloatingActions />
 
-      <section style={{ maxWidth: 1220, margin: "0 auto" }}>
+      <section style={{ maxWidth: 1220, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         <h1
           style={{
             margin: "0 0 34px",
@@ -312,12 +315,11 @@ export default function CheckoutPage() {
         <div
           className="checkout-grid"
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 380px",
-            gap: 28,
+            width: "100%",
+            boxSizing: "border-box",
           }}
         >
-          <div style={{ display: "grid", gap: 24 }}>
+          <div style={{ display: "grid", gap: 24, width: "100%", boxSizing: "border-box" }}>
             <section style={panelStyle}>
               <p style={kickerStyle}>01/ Address</p>
               <h2 style={sectionTitleStyle}>delivery address</h2>
@@ -337,6 +339,8 @@ export default function CheckoutPage() {
                         cursor: "pointer",
                         display: "block",
                         backgroundColor: selectedAddressId === address._id ? "rgba(47, 62, 47, 0.04)" : "#fff",
+                        width: "100%",
+                        boxSizing: "border-box",
                       }}
                     >
                       <input
@@ -371,6 +375,8 @@ export default function CheckoutPage() {
                       display: "block",
                       backgroundColor: selectedAddressId === "new" ? "rgba(47, 62, 47, 0.04)" : "transparent",
                       textAlign: "center",
+                      width: "100%",
+                      boxSizing: "border-box",
                     }}
                   >
                     <input
@@ -420,14 +426,7 @@ export default function CheckoutPage() {
                   style={inputStyle}
                 />
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
-                    gap: 12,
-                  }}
-                  className="address-row"
-                >
+                <div className="address-row">
                   <input
                     placeholder="City"
                     value={form.city}
@@ -619,9 +618,26 @@ export default function CheckoutPage() {
       </section>
 
       <style dangerouslySetInnerHTML={{ __html: `
+        .checkout-grid {
+          display: grid;
+          grid-template-columns: 1fr 380px;
+          gap: 28px;
+        }
+
+        .address-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 12px;
+        }
+
         @media (max-width: 900px) {
+          .checkout-main {
+            padding: 88px 12px 56px !important;
+          }
+
           .checkout-grid {
             grid-template-columns: 1fr !important;
+            gap: 20px !important;
           }
 
           .address-row {
@@ -647,6 +663,8 @@ const panelStyle: React.CSSProperties = {
   padding: "clamp(22px, 4vw, 34px)",
   boxShadow: "0 18px 45px rgba(0,0,0,0.08)",
   boxSizing: "border-box",
+  width: "100%",
+  maxWidth: "100%",
 };
 
 const kickerStyle: React.CSSProperties = {
@@ -691,4 +709,6 @@ const summaryStyle: React.CSSProperties = {
   position: "sticky",
   top: 24,
   boxSizing: "border-box",
+  width: "100%",
+  maxWidth: "100%",
 };
