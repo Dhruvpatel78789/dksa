@@ -292,6 +292,7 @@ export default function CheckoutPage() {
         padding: "clamp(88px, 10vw, 120px) clamp(22px, 5vw, 56px) 56px",
         fontFamily: "Arial, sans-serif",
         color: "#111",
+        boxSizing: "border-box",
       }}
     >
       <FloatingActions />
@@ -645,6 +646,7 @@ const panelStyle: React.CSSProperties = {
   borderRadius: 36,
   padding: "clamp(22px, 4vw, 34px)",
   boxShadow: "0 18px 45px rgba(0,0,0,0.08)",
+  boxSizing: "border-box",
 };
 
 const kickerStyle: React.CSSProperties = {
@@ -667,6 +669,7 @@ const inputStyle: React.CSSProperties = {
   padding: "14px 16px",
   fontSize: 16,
   outline: "none",
+  boxSizing: "border-box",
 };
 
 const darkButtonStyle: React.CSSProperties = {
@@ -687,4 +690,5 @@ const summaryStyle: React.CSSProperties = {
   height: "fit-content",
   position: "sticky",
   top: 24,
+  boxSizing: "border-box",
 };
