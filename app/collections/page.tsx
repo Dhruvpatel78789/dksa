@@ -95,9 +95,11 @@ export default function CollectionsPage() {
     style={{
       display: "flex",
       gap: 12,
-      flexWrap: "wrap",
       alignItems: "center",
       justifyContent: "center",
+      width: "100%",
+      maxWidth: "500px",
+      margin: "0 auto",
     }}
   >
     <select
@@ -284,4 +286,6 @@ const filterStyle: React.CSSProperties = {
   backgroundColor: "#FFFFFF",
   color: "#111",
   fontWeight: 800,
+  flex: 1,
+  minWidth: 0,
 };

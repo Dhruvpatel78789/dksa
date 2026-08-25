@@ -29,6 +29,21 @@ type Address = {
 export default function CheckoutPage() {
   const router = useRouter();
 
+  const [mounted, setMounted] = useState(false);
+  const [isMobileRaw, setIsMobileRaw] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const checkMobile = () => {
+      setIsMobileRaw(window.innerWidth <= 900);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const isMobile = mounted ? isMobileRaw : false;
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
@@ -297,7 +312,7 @@ export default function CheckoutPage() {
           className="checkout-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 380px",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 380px",
             gap: 28,
           }}
         >
@@ -407,7 +422,7 @@ export default function CheckoutPage() {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
                     gap: 12,
                   }}
                   className="address-row"
