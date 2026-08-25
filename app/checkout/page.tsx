@@ -313,7 +313,7 @@ export default function CheckoutPage() {
           className="checkout-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "1fr 380px",
+            gridTemplateColumns: "1fr 380px",
             gap: 28,
           }}
         >
@@ -423,7 +423,7 @@ export default function CheckoutPage() {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr",
+                    gridTemplateColumns: "1fr 1fr 1fr",
                     gap: 12,
                   }}
                   className="address-row"
@@ -618,7 +618,7 @@ export default function CheckoutPage() {
         </div>
       </section>
 
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media (max-width: 900px) {
           .checkout-grid {
             grid-template-columns: 1fr !important;
@@ -628,7 +628,7 @@ export default function CheckoutPage() {
             grid-template-columns: 1fr !important;
           }
         }
-      `}</style>
+      `}} />
     </main>
   );
 }
