@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     }
 
     if (!userId) {
-      guestCartId = (await cookies()).get("guest_cart_id")?.value;
+      guestCartId = (await cookies()).get("guest_cart_id")?.value || null;
       if (!guestCartId) {
         return Response.json(
           { error: "Guest cart not found" },
