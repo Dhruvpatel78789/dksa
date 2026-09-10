@@ -35,6 +35,18 @@ export async function POST(request: Request) {
 
       const phoneNormalized = normalizePhone(phoneInput);
 
+      // Check if phone number is already associated with another account
+      const existingUser = await db.collection("users").findOne({
+        phone: phoneNormalized,
+        _id: { $ne: user._id }
+      });
+      if (existingUser) {
+        return Response.json(
+          { error: "This phone number is already associated with another account." },
+          { status: 400 }
+        );
+      }
+
       // Generate a 6-digit verification code
       const code = String(Math.floor(100000 + Math.random() * 900000));
       const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes

@@ -20,8 +20,10 @@ export async function GET(request: Request) {
     const db = client.db("medtech");
 
     const user = await db.collection("users").findOne({
-      email: emailNormalized,
-      emailVerificationToken: token,
+      $or: [
+        { email: emailNormalized, emailVerificationToken: token },
+        { pendingEmail: emailNormalized, emailVerificationToken: token }
+      ]
     });
 
     if (!user) {
@@ -36,15 +38,23 @@ export async function GET(request: Request) {
       );
     }
 
+    const isNewEmail = user.pendingEmail === emailNormalized;
+    const updateFields: any = {
+      isEmailVerified: true,
+      emailVerifiedAt: new Date(),
+    };
+
+    if (isNewEmail) {
+      updateFields.email = emailNormalized;
+    }
+
     // Mark email as verified
     await db.collection("users").updateOne(
       { _id: user._id },
       {
-        $set: {
-          isEmailVerified: true,
-          emailVerifiedAt: new Date(),
-        },
+        $set: updateFields,
         $unset: {
+          pendingEmail: "",
           emailVerificationToken: "",
           emailVerificationExpires: "",
         },

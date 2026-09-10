@@ -653,47 +653,17 @@ function FooterLink({ text }: { text: string }) {
 
       /*
         Timeline:
-        0.00 - 0.30  typewriter ends on slow growth
-        0.30 - 0.44  chips appear close/random around slow growth
-        0.44 - 0.66  chips expand outward
-        0.55          problem statement disappears completely
-        0.56 - 0.66  solution statement appears at exact same center point
-        0.68 - 0.80  solution statement moves up and exits
-        0.76 - 0.88  video slides up from bottom
-        0.88 - 1.00  video is fully visible; frame sequence plays
+        0.00 - 0.05  All problems visible but muted
+        0.05 - 0.38  Problems highlight sequentially
+        0.38 - 0.46  All problems remain fully highlighted
+        0.46 - 0.54  Problems list container fades out and moves up
+        0.46 - 0.64  Solution statement fades in
+        0.67 - 0.79  Solution statement moves up and exits
+        0.65 - 0.83  Video slides up from bottom
+        0.82 - 1.00  Video fully visible; frame sequence plays
       */
 
-      const typeProgress = clamp(foundationProgress / 0.3);
-
-      const rawIndex = typeProgress * problems.length;
-      const currentIndex = Math.min(
-        problems.length - 1,
-        Math.floor(rawIndex)
-      );
-
-      const currentWord = problems[currentIndex];
-      const localProgress = rawIndex - currentIndex;
-
-      const typingProgress =
-        localProgress < 0.72 ? localProgress / 0.72 : 1;
-
-      const visibleLetters = Math.floor(
-        currentWord.length * typingProgress
-      );
-
-      const typedText = currentWord.slice(0, visibleLetters);
-
-
-      const chipAppearProgress = clamp((foundationProgress - 0.34) / 0.12);
-
-      // chips expansion synced with solution appearance
-      const chipExitProgress = clamp((foundationProgress - 0.46) / 0.26);
-
-      // smooth fade out for slow growth
-      const problemFadeOut = 1 - clamp((foundationProgress - 0.29) / 0.18);
-
-      // solution fades in while chips expand
-      const solutionReveal = clamp((foundationProgress - 0.45) / 0.2);
+      const transitionProgress = clamp((foundationProgress - 0.45) / 0.18);
 
       // move solution upward later
       const solutionMoveUpProgress = clamp((foundationProgress - 0.67) / 0.12);
@@ -701,210 +671,115 @@ function FooterLink({ text }: { text: string }) {
       // video slides in only after text moves
       const videoSlideProgress = clamp((foundationProgress - 0.65) / 0.18);
 
-      const chipPositions = [
-        {
-          label: "hair fall",
-          startX: -18,
-          startY: -10,
-          exitX: -120,
-          exitY: -82,
-          rotate: -13,
-        },
-        {
-          label: "weak roots",
-          startX: 6,
-          startY: -16,
-          exitX: 42,
-          exitY: -122,
-          rotate: 11,
-        },
-        {
-          label: "dull hair",
-          startX: 20,
-          startY: -5,
-          exitX: 118,
-          exitY: -38,
-          rotate: -9,
-        },
-        {
-          label: "dandruff",
-          startX: 17,
-          startY: 13,
-          exitX: 114,
-          exitY: 72,
-          rotate: 12,
-        },
-        {
-          label: "dry scalp",
-          startX: -8,
-          startY: 17,
-          exitX: -36,
-          exitY: 112,
-          rotate: -11,
-        },
-        {
-          label: "slow growth",
-          startX: -21,
-          startY: 5,
-          exitX: -118,
-          exitY: 50,
-          rotate: 9,
-        },
-      ];
-
       return (
         <>
-          {/* Problem typewriter / slow growth statement */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 35,
-                pointerEvents: "none",
-                opacity: problemFadeOut,
-                transition: "opacity 0.1s linear",
-              }}
-            >
-              <div style={{ textAlign: "center", padding: "0 24px" }}>
-                <p
-                  style={{
-                    margin: "0 0 18px",
-                    color: "#6B705C",
-                    fontSize: "clamp(18px, 2vw, 28px)",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  Struggling with
-                </p>
-
-                <h1
-                  style={{
-                    margin: 0,
-                    fontSize: "clamp(52px, 11vw, 150px)",
-                    lineHeight: 1,
-                    letterSpacing: "-0.07em",
-                    color: "#2F3E2F",
-                  }}
-                >
-                  {foundationProgress < 0.3 ? typedText : "slow growth"}
-
-                  {foundationProgress < 0.3 && (
-                    <span
-                      style={{
-                        display: "inline-block",
-                        marginLeft: "8px",
-                        width: "4px",
-                        height: "0.8em",
-                        backgroundColor: "#3A5A40",
-                        transform: "translateY(8px)",
-                        opacity:
-                          Math.floor(foundationProgress * 80) % 2 === 0
-                            ? 1
-                            : 0.25,
-                      }}
-                    />
-                  )}
-                </h1>
-              </div>
-            </div>
-          
-          
-
-          {/* Chips: close/random first, then expand outward */}
+          {/* Problems list vertical progression */}
           <div
             style={{
               position: "absolute",
               inset: 0,
               display: "flex",
-              alignItems: "center",
+              flexDirection: "column",
               justifyContent: "center",
-              zIndex: 45,
+              zIndex: 35,
               pointerEvents: "none",
+              transform: `translate3d(0, -${transitionProgress * 100}vh, 0)`,
+              boxSizing: "border-box",
+              paddingInline: "clamp(24px, 8vw, 120px)",
+              width: "100%",
             }}
           >
-            {chipPositions.map((chip) => {
-              const x =
-                chip.startX +
-                (chip.exitX - chip.startX) * chipExitProgress;
+            {/* Centered Heading */}
+            <div style={{ alignSelf: "center", textAlign: "center", marginBottom: "clamp(28px, 6vh, 60px)" }}>
+              <p
+                style={{
+                  margin: 0,
+                  color: "#6B705C",
+                  fontSize: "clamp(20px, 3.5vw, 42px)",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  fontWeight: 900,
+                }}
+              >
+                Struggling with
+              </p>
+            </div>
 
-              const y =
-                chip.startY +
-                (chip.exitY - chip.startY) * chipExitProgress;
+            {/* Left Aligned Problems list */}
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "clamp(12px, 3vh, 28px)",
+              maxWidth: "1000px",
+              width: "100%",
+              alignSelf: "flex-start",
+              textAlign: "left"
+            }}>
+              {problems.map((problem, i) => {
+                const start = 0.05 + i * 0.055;
+                const end = start + 0.055;
+                const itemProgress = clamp((foundationProgress - start) / (end - start));
 
-              return (
-                <div
-                  key={chip.label}
-                  style={{
-                    position: "absolute",
-                    left: "50%",
-                    top: "50%",
-                    padding: "14px 22px",
-                    borderRadius: "999px",
-                    backgroundColor: "rgba(255,255,255,0.92)",
-                    color: "#2F3E2F",
-                    fontSize: "clamp(16px, 2vw, 26px)",
-                    fontWeight: 800,
-                    letterSpacing: "-0.03em",
-                    boxShadow: "0 18px 38px rgba(58,90,64,0.16)",
-                    border: "1px solid rgba(58,90,64,0.12)",
-                    backdropFilter: "blur(8px)",
-                    opacity:
-                      chipExitProgress >= 1 ? 0 : chipAppearProgress,
-                    transform: `
-                      translate(-50%, -50%)
-                      translate(${x}vw, ${y}vh)
-                      rotate(${chip.rotate * chipExitProgress}deg)
-                      scale(${0.94 + chipAppearProgress * 0.06})
-                    `,
-                  }}
-                >
-                  {chip.label}
-                </div>
-              );
-            })}
+                return (
+                  <h1
+                    key={problem}
+                    style={{
+                      margin: 0,
+                      fontSize: "clamp(32px, 6.5vw, 92px)",
+                      lineHeight: 1.05,
+                      letterSpacing: "-0.05em",
+                      fontWeight: 900,
+                      color: "#2F3E2F",
+                      opacity: 0.25 + itemProgress * 0.75,
+                      transform: `translate3d(${12 * (1 - itemProgress)}px, 0, 0)`,
+                      transition: "opacity 0.25s ease, transform 0.25s ease",
+                    }}
+                  >
+                    {problem}
+                  </h1>
+                );
+              })}
+            </div>
           </div>
 
           {/* Solution statement: exact same center point, appears only after problem is gone */}
-            <div
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: `${50 - solutionMoveUpProgress * 90}%`,
+              transform: `translate(-50%, -50%) translate3d(0, ${100 * (1 - transitionProgress)}vh, 0)`,
+              width: "min(980px, 92vw)",
+              zIndex: 60,
+              opacity: foundationProgress >= 0.45 ? 1 : 0,
+              padding: "0 24px",
+              pointerEvents: "none",
+              textAlign: "center",
+            }}
+          >
+            <h2
               style={{
-                position: "absolute",
-                left: "50%",
-                top: `${50 - solutionMoveUpProgress * 90}%`,
-                transform: "translate(-50%, -50%)",
-                width: "min(980px, 92vw)",
-                zIndex: 60,
-                opacity: solutionReveal,
-                padding: "0 24px",
-                pointerEvents: "none",
-                textAlign: "center",
+                margin: 0,
+                fontSize: "clamp(56px, 9vw, 140px)",
+                lineHeight: 0.9,
+                letterSpacing: "-0.08em",
+                color: "#2F3E2F",
               }}
             >
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: "clamp(56px, 9vw, 140px)",
-                  lineHeight: 0.9,
-                  letterSpacing: "-0.08em",
-                  color: "#2F3E2F",
-                }}
-              >
-                We have the solution.
-              </h2>
+              We have the solution.
+            </h2>
 
-              <p
-                style={{
-                  margin: "22px 0 0",
-                  fontSize: "clamp(18px, 2vw, 30px)",
-                  lineHeight: 1.35,
-                  color: "#6B705C",
-                }}
-              >
-                Every concern deserves the right care.
-              </p>
-            </div>
+            <p
+              style={{
+                margin: "22px 0 0",
+                fontSize: "clamp(18px, 2vw, 30px)",
+                lineHeight: 1.35,
+                color: "#6B705C",
+              }}
+            >
+              Every concern deserves the right care.
+            </p>
+          </div>
 
           {/* Video slides up from bottom. Frames play only once video is fully visible. */}
           <div
