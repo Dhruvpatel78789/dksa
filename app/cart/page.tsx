@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FloatingActions from "../components/FloatingActions";
+import Footer from "../components/Footer";
 
 type CartItem = {
   productId: string;
@@ -343,7 +344,7 @@ async function removeItem(
           <h2
             style={{
               margin: "10px 0 24px",
-              fontSize: 54,
+              fontSize: 48,
               lineHeight: 0.9,
               letterSpacing: "-0.07em",
             }}
@@ -355,33 +356,80 @@ async function removeItem(
             style={{
               display: "flex",
               justifyContent: "space-between",
-              fontSize: 22,
-              marginBottom: 26,
+              fontSize: 16,
+              marginBottom: 12,
+              color: "rgba(255,255,255,0.8)",
             }}
           >
-            <span>Total</span>
+            <span>Subtotal</span>
+            <strong>₹{Math.round(total)}</strong>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: 16,
+              marginBottom: 12,
+              color: "rgba(255,255,255,0.8)",
+            }}
+          >
+            <span>Shipping / Freight</span>
+            <strong style={{ color: "#81B29A" }}>FREE</strong>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: 14,
+              marginBottom: 20,
+              color: "rgba(255,255,255,0.6)",
+            }}
+          >
+            <span>GST (5% Included)</span>
+            <span>₹{Math.round((total * 5) / 105)}</span>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: 22,
+              marginBottom: 26,
+              borderTop: "1px solid rgba(255,255,255,0.15)",
+              paddingTop: 16,
+            }}
+          >
+            <span>Total Payable</span>
             <strong>₹{Math.round(total)}</strong>
           </div>
 
           <button
             onClick={() => {
-                window.location.href = "/checkout";
+              window.location.href = "/checkout";
             }}
+            disabled={cart.length === 0}
             style={{
-                width: "100%",
-                border: "none",
-                borderRadius: 999,
-                padding: "16px 20px",
-                backgroundColor: "#FFE5D4",
-                color: "#111",
-                fontWeight: 900,
-                cursor: "pointer",
+              width: "100%",
+              border: "none",
+              borderRadius: 999,
+              padding: "16px 20px",
+              backgroundColor: "#FFE5D4",
+              color: "#111",
+              fontWeight: 900,
+              cursor: cart.length === 0 ? "not-allowed" : "pointer",
+              opacity: cart.length === 0 ? 0.5 : 1,
             }}
-            >
-            Checkout
-            </button>
+          >
+            Proceed To Checkout
+          </button>
         </aside>
       </section>
+
+      <div style={{ marginTop: 80 }}>
+        <Footer />
+      </div>
 
       <style jsx>{`
         @media (max-width: 900px) {

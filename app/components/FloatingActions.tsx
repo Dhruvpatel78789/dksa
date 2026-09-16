@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import CartDrawer from "./CartDrawer";
 
 export default function FloatingActions() {
   const pathname = usePathname();
@@ -46,11 +47,14 @@ export default function FloatingActions() {
 
   return (
     <>
+      <CartDrawer />
       {/* DESKTOP */}
       <div className="hidden md:flex fixed top-[22px] left-[22px] z-[9999] gap-3">
-        <button onClick={() => router.back()} style={iconStyle}>
-          ←
-        </button>
+        {pathname !== "/" && (
+          <button onClick={() => router.back()} style={iconStyle}>
+            ←
+          </button>
+        )}
 
         {pathname !== "/" && (
           <Link
@@ -68,8 +72,8 @@ export default function FloatingActions() {
       </div>
 
       <div className="hidden md:flex fixed top-[22px] right-[22px] z-[9999] gap-3">
-        {pathname !== "/collections" && (
-          <Link href="/collections" style={iconStyle}>
+        {pathname !== "/shop" && (
+          <Link href="/shop" style={iconStyle}>
             🛍️
           </Link>
         )}
@@ -89,11 +93,13 @@ export default function FloatingActions() {
       </div>
 
       {/* MOBILE LEFT BACK */}
-      <div className="flex md:hidden fixed top-[12px] left-[12px] z-[9999]">
-        <button onClick={() => router.back()} style={iconStyle}>
-          ←
-        </button>
-      </div>
+      {pathname !== "/" && (
+        <div className="flex md:hidden fixed top-[12px] left-[12px] z-[9999]">
+          <button onClick={() => router.back()} style={iconStyle}>
+            ←
+          </button>
+        </div>
+      )}
 
       {/* MOBILE */}
       <div className="flex md:hidden fixed top-[12px] right-[12px] z-[9999] flex-col items-end gap-2.5">
@@ -127,9 +133,9 @@ export default function FloatingActions() {
               </Link>
             )}
 
-            {pathname !== "/collections" && (
+            {pathname !== "/shop" && (
               <Link
-                href="/collections"
+                href="/shop"
                 onClick={() => setOpen(false)}
                 style={iconStyle}
               >

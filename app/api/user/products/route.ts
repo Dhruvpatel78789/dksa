@@ -1,4 +1,5 @@
 import clientPromise from "@/lib/mongodb";
+import { slugify } from "@/lib/normalize";
 
 export async function GET() {
   try {
@@ -11,6 +12,7 @@ export async function GET() {
       .sort({ createdAt: -1 })
       .project({
         name: 1,
+        slug: 1,
         description: 1,
         howToUse: 1,
         photos: 1,
@@ -26,6 +28,7 @@ export async function GET() {
       products: products.map((product) => ({
         ...product,
         _id: product._id.toString(),
+        slug: product.slug || slugify(product.name || ""),
       })),
     });
   } catch (error) {

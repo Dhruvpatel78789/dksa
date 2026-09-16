@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import FloatingActions from "../components/FloatingActions";
+import Footer from "../components/Footer";
 import { useRouter } from "next/navigation";
 
 type CartItem = {
@@ -69,6 +70,8 @@ export default function CheckoutPage() {
     state: "",
     pincode: "",
   });
+
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const subtotal = useMemo(() => {
     return cart.reduce((sum, item) => {
@@ -205,63 +208,70 @@ export default function CheckoutPage() {
   }
 
   async function placeOrder() {
-  let selectedAddress;
+    let selectedAddress;
+    const newErrors: Record<string, string> = {};
 
-  if (user) {
-    selectedAddress = addresses.find(
-      (address) => address._id === selectedAddressId
-    );
-    if (!selectedAddress) {
-      alert("Select or add an address first.");
-      return;
-    }
-  } else {
-    // Guest checkout validation
-    if (!form.fullName.trim()) {
-      alert("Full Name is required.");
-      return;
-    }
-    if (!form.email.trim()) {
-      alert("Email is required.");
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email.trim())) {
-      alert("Please enter a valid email address.");
-      return;
-    }
-    if (!form.phone.trim()) {
-      alert("Phone Number is required.");
-      return;
-    }
-    if (!form.line1.trim()) {
-      alert("Address Line 1 is required.");
-      return;
-    }
-    if (!form.city.trim()) {
-      alert("City is required.");
-      return;
-    }
-    if (!form.state.trim()) {
-      alert("State is required.");
-      return;
-    }
-    if (!form.pincode.trim()) {
-      alert("Pincode is required.");
-      return;
-    }
+    if (user && selectedAddressId !== "new") {
+      selectedAddress = addresses.find(
+        (address) => address._id === selectedAddressId
+      );
+      if (!selectedAddress) {
+        setFormErrors({ address: "Please select an address or enter a new one." });
+        return;
+      }
+    } else {
+      if (!form.fullName.trim()) {
+        newErrors.fullName = "Full Name is required.";
+      }
+      if (!user) {
+        if (!form.email.trim()) {
+          newErrors.email = "Email is required.";
+        } else {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(form.email.trim())) {
+            newErrors.email = "Please enter a valid email address.";
+          }
+        }
+      }
+      if (!form.phone.trim()) {
+        newErrors.phone = "Phone Number is required.";
+      } else {
+        const phoneClean = form.phone.replace(/\D/g, "");
+        if (phoneClean.length < 10) {
+          newErrors.phone = "Please enter a valid 10-digit phone number.";
+        }
+      }
+      if (!form.line1.trim()) {
+        newErrors.line1 = "Address Line 1 is required.";
+      }
+      if (!form.city.trim()) {
+        newErrors.city = "City is required.";
+      }
+      if (!form.state.trim()) {
+        newErrors.state = "State is required.";
+      }
+      if (!form.pincode.trim()) {
+        newErrors.pincode = "Pincode is required.";
+      }
 
-    selectedAddress = {
-      fullName: form.fullName.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-      line1: form.line1.trim(),
-      line2: form.line2?.trim() || "",
-      city: form.city.trim(),
-      state: form.state.trim(),
-      pincode: form.pincode.trim(),
-    };
-  }
+      if (Object.keys(newErrors).length > 0) {
+        setFormErrors(newErrors);
+        return;
+      }
+
+      setFormErrors({});
+
+      selectedAddress = {
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        line1: form.line1.trim(),
+        line2: form.line2?.trim() || "",
+        city: form.city.trim(),
+        state: form.state.trim(),
+        pincode: form.pincode.trim(),
+      };
+    }
 
   setPlacingOrder(true);
 
@@ -450,44 +460,92 @@ export default function CheckoutPage() {
               )}
 
               <div style={{ display: "grid", gap: 14 }}>
-                <input
-                  placeholder="Full name"
-                  value={form.fullName}
-                  onChange={(e) =>
-                    setForm({ ...form, fullName: e.target.value })
-                  }
-                  onBlur={() => handleAutoSave(form)}
-                  style={inputStyle}
-                />
+                <div>
+                  <input
+                    placeholder="Full name"
+                    value={form.fullName}
+                    onChange={(e) => {
+                      setForm({ ...form, fullName: e.target.value });
+                      if (formErrors.fullName) setFormErrors({ ...formErrors, fullName: "" });
+                    }}
+                    onBlur={() => handleAutoSave(form)}
+                    style={{
+                      ...inputStyle,
+                      border: formErrors.fullName ? "2px solid #E53E3E" : "1px solid #ddd",
+                    }}
+                  />
+                  {formErrors.fullName && (
+                    <span style={{ color: "#E53E3E", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                      {formErrors.fullName}
+                    </span>
+                  )}
+                </div>
 
                 {!user && (
-                  <input
-                    placeholder="Email address"
-                    value={form.email}
-                    onChange={(e) =>
-                      setForm({ ...form, email: e.target.value })
-                    }
-                    type="email"
-                    onBlur={() => handleAutoSave(form)}
-                    style={inputStyle}
-                  />
+                  <div>
+                    <input
+                      placeholder="Email address"
+                      value={form.email}
+                      onChange={(e) => {
+                        setForm({ ...form, email: e.target.value });
+                        if (formErrors.email) setFormErrors({ ...formErrors, email: "" });
+                      }}
+                      type="email"
+                      onBlur={() => handleAutoSave(form)}
+                      style={{
+                        ...inputStyle,
+                        border: formErrors.email ? "2px solid #E53E3E" : "1px solid #ddd",
+                      }}
+                    />
+                    {formErrors.email && (
+                      <span style={{ color: "#E53E3E", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                        {formErrors.email}
+                      </span>
+                    )}
+                  </div>
                 )}
 
-                <input
-                  placeholder="Phone"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  onBlur={() => handleAutoSave(form)}
-                  style={inputStyle}
-                />
+                <div>
+                  <input
+                    placeholder="Phone"
+                    value={form.phone}
+                    onChange={(e) => {
+                      setForm({ ...form, phone: e.target.value });
+                      if (formErrors.phone) setFormErrors({ ...formErrors, phone: "" });
+                    }}
+                    onBlur={() => handleAutoSave(form)}
+                    style={{
+                      ...inputStyle,
+                      border: formErrors.phone ? "2px solid #E53E3E" : "1px solid #ddd",
+                    }}
+                  />
+                  {formErrors.phone && (
+                    <span style={{ color: "#E53E3E", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                      {formErrors.phone}
+                    </span>
+                  )}
+                </div>
 
-                <input
-                  placeholder="Address line 1"
-                  value={form.line1}
-                  onChange={(e) => setForm({ ...form, line1: e.target.value })}
-                  onBlur={() => handleAutoSave(form)}
-                  style={inputStyle}
-                />
+                <div>
+                  <input
+                    placeholder="Address line 1"
+                    value={form.line1}
+                    onChange={(e) => {
+                      setForm({ ...form, line1: e.target.value });
+                      if (formErrors.line1) setFormErrors({ ...formErrors, line1: "" });
+                    }}
+                    onBlur={() => handleAutoSave(form)}
+                    style={{
+                      ...inputStyle,
+                      border: formErrors.line1 ? "2px solid #E53E3E" : "1px solid #ddd",
+                    }}
+                  />
+                  {formErrors.line1 && (
+                    <span style={{ color: "#E53E3E", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                      {formErrors.line1}
+                    </span>
+                  )}
+                </div>
 
                 <input
                   placeholder="Address line 2 optional"
@@ -498,35 +556,68 @@ export default function CheckoutPage() {
                 />
 
                 <div className="address-row">
-                  <input
-                    placeholder="City"
-                    value={form.city}
-                    onChange={(e) =>
-                      setForm({ ...form, city: e.target.value })
-                    }
-                    onBlur={() => handleAutoSave(form)}
-                    style={inputStyle}
-                  />
+                  <div>
+                    <input
+                      placeholder="City"
+                      value={form.city}
+                      onChange={(e) => {
+                        setForm({ ...form, city: e.target.value });
+                        if (formErrors.city) setFormErrors({ ...formErrors, city: "" });
+                      }}
+                      onBlur={() => handleAutoSave(form)}
+                      style={{
+                        ...inputStyle,
+                        border: formErrors.city ? "2px solid #E53E3E" : "1px solid #ddd",
+                      }}
+                    />
+                    {formErrors.city && (
+                      <span style={{ color: "#E53E3E", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                        {formErrors.city}
+                      </span>
+                    )}
+                  </div>
 
-                  <input
-                    placeholder="State"
-                    value={form.state}
-                    onChange={(e) =>
-                      setForm({ ...form, state: e.target.value })
-                    }
-                    onBlur={() => handleAutoSave(form)}
-                    style={inputStyle}
-                  />
+                  <div>
+                    <input
+                      placeholder="State"
+                      value={form.state}
+                      onChange={(e) => {
+                        setForm({ ...form, state: e.target.value });
+                        if (formErrors.state) setFormErrors({ ...formErrors, state: "" });
+                      }}
+                      onBlur={() => handleAutoSave(form)}
+                      style={{
+                        ...inputStyle,
+                        border: formErrors.state ? "2px solid #E53E3E" : "1px solid #ddd",
+                      }}
+                    />
+                    {formErrors.state && (
+                      <span style={{ color: "#E53E3E", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                        {formErrors.state}
+                      </span>
+                    )}
+                  </div>
 
-                  <input
-                    placeholder="Pincode"
-                    value={form.pincode}
-                    onChange={(e) =>
-                      setForm({ ...form, pincode: e.target.value })
-                    }
-                    onBlur={() => handleAutoSave(form)}
-                    style={inputStyle}
-                  />
+                  <div>
+                    <input
+                      placeholder="Pincode"
+                      value={form.pincode}
+                      onChange={(e) => {
+                        setForm({ ...form, pincode: e.target.value });
+                        if (formErrors.pincode) setFormErrors({ ...formErrors, pincode: "" });
+                      }}
+                      onBlur={() => handleAutoSave(form)}
+                      style={{
+                        ...inputStyle,
+                        border: formErrors.pincode ? "2px solid #E53E3E" : "1px solid #ddd",
+                      }}
+                    />
+                    {formErrors.pincode && (
+                      <span style={{ color: "#E53E3E", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                        {formErrors.pincode}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </section>
@@ -635,8 +726,9 @@ export default function CheckoutPage() {
     style={{
       display: "flex",
       justifyContent: "space-between",
-      marginBottom: 12,
+      marginBottom: 10,
       color: "rgba(255,255,255,0.72)",
+      fontSize: 15,
     }}
   >
     <span>Subtotal</span>
@@ -648,14 +740,41 @@ export default function CheckoutPage() {
       style={{
         display: "flex",
         justifyContent: "space-between",
-        marginBottom: 12,
+        marginBottom: 10,
         color: "#FFE5D4",
+        fontSize: 15,
       }}
     >
       <span>Coupon ({appliedCoupon.code})</span>
       <strong>-₹{Math.round(appliedCoupon.discountAmount)}</strong>
     </div>
   )}
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      marginBottom: 10,
+      color: "rgba(255,255,255,0.72)",
+      fontSize: 15,
+    }}
+  >
+    <span>Shipping</span>
+    <strong style={{ color: "#81B29A" }}>FREE</strong>
+  </div>
+
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      marginBottom: 16,
+      color: "rgba(255,255,255,0.55)",
+      fontSize: 13,
+    }}
+  >
+    <span>GST (5% Included)</span>
+    <span>₹{Math.round((total * 5) / 105)}</span>
+  </div>
 
   <div
     style={{
@@ -669,7 +788,7 @@ export default function CheckoutPage() {
       width: "100%",
     }}
   >
-    <span style={{ flex: 1, minWidth: 0 }}>Total</span>
+    <span style={{ flex: 1, minWidth: 0 }}>Total Payable</span>
     <strong style={{ flexShrink: 0 }}>₹{Math.round(total)}</strong>
   </div>
 
@@ -760,6 +879,9 @@ export default function CheckoutPage() {
           }
         }
       `}} />
+      <div style={{ marginTop: 80 }}>
+        <Footer />
+      </div>
     </main>
   );
 }

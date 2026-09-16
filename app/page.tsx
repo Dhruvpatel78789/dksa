@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { getOptimizedMediaUrl } from "@/lib/media";
 import Link from "next/link";
 import FloatingActions from "./components/FloatingActions";
+import Footer from "./components/Footer";
+import { slugify } from "@/lib/normalize";
 
 const FRAME_COUNT = 191;
 
@@ -393,7 +395,8 @@ function FooterLink({ text }: { text: string }) {
               <div
                 key={item._id || index}
                 onClick={() => {
-                  window.location.href = `/products/${item._id}`;
+                  const targetSlug = item.slug || slugify(item.name || "");
+                  window.location.href = `/product/${targetSlug}`;
                 }}
                 style={{
                   flex: "0 0 100%",
@@ -742,44 +745,53 @@ function FooterLink({ text }: { text: string }) {
             </div>
           </div>
 
-          {/* Solution statement: exact same center point, appears only after problem is gone */}
-          <div
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: `${50 - solutionMoveUpProgress * 90}%`,
-              transform: `translate(-50%, -50%) translate3d(0, ${100 * (1 - transitionProgress)}vh, 0)`,
-              width: "min(980px, 92vw)",
-              zIndex: 60,
-              opacity: foundationProgress >= 0.45 ? 1 : 0,
-              padding: "0 24px",
-              pointerEvents: "none",
-              textAlign: "center",
-            }}
-          >
-            <h2
-              style={{
-                margin: 0,
-                fontSize: "clamp(56px, 9vw, 140px)",
-                lineHeight: 0.9,
-                letterSpacing: "-0.08em",
-                color: "#2F3E2F",
-              }}
-            >
-              We have the solution.
-            </h2>
+          {/* Solution statement: smooth fade-in and fade-out during scrolling */}
+          {(() => {
+            const solutionOpacity =
+              clamp((foundationProgress - 0.44) / 0.08) *
+              (1 - clamp((foundationProgress - 0.64) / 0.08));
 
-            <p
-              style={{
-                margin: "22px 0 0",
-                fontSize: "clamp(18px, 2vw, 30px)",
-                lineHeight: 1.35,
-                color: "#6B705C",
-              }}
-            >
-              Every concern deserves the right care.
-            </p>
-          </div>
+            return (
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: `${50 - solutionMoveUpProgress * 90}%`,
+                  transform: `translate(-50%, -50%) translate3d(0, ${100 * (1 - transitionProgress)}vh, 0)`,
+                  width: "min(980px, 92vw)",
+                  zIndex: 60,
+                  opacity: solutionOpacity,
+                  padding: "0 24px",
+                  pointerEvents: "none",
+                  textAlign: "center",
+                  transition: "opacity 0.25s ease",
+                }}
+              >
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: "clamp(56px, 9vw, 140px)",
+                    lineHeight: 0.9,
+                    letterSpacing: "-0.08em",
+                    color: "#2F3E2F",
+                  }}
+                >
+                  We have the solution.
+                </h2>
+
+                <p
+                  style={{
+                    margin: "22px 0 0",
+                    fontSize: "clamp(18px, 2vw, 30px)",
+                    lineHeight: 1.35,
+                    color: "#6B705C",
+                  }}
+                >
+                  Every concern deserves the right care.
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Video slides up from bottom. Frames play only once video is fully visible. */}
           <div
@@ -1154,7 +1166,7 @@ function FooterLink({ text }: { text: string }) {
             fits your concern.
           </p>
 
-          <Link href="/collections" style={{ textDecoration: "none" }}>
+          <Link href="/shop" style={{ textDecoration: "none" }}>
             <button
               style={{
                 border: "none",
@@ -1366,79 +1378,8 @@ function FooterLink({ text }: { text: string }) {
         </div>
       </section>
 
-{/* FOOTER */}
-<footer
-  style={{
-    backgroundColor: "#FFFFFF",
-    padding: isMobile ? "48px 24px" : "64px 80px",
-    color: "#7A7A7A",
-    fontFamily: "Arial, sans-serif",
-  }}
->
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: isMobile
-        ? "1fr"
-        : "1.6fr 1fr 1fr 1fr 1fr",
-      gap: isMobile ? "36px" : "56px",
-      maxWidth: "1400px",
-      margin: "0 auto",
-    }}
-  >
-    <div>
-      <img
-        src="/logo.png"
-        alt="Logo"
-        style={{
-          width: "90px",
-          height: "auto",
-          marginBottom: "28px",
-        }}
-      />
-
-      <p style={{ fontSize: "18px", lineHeight: 1.6, marginBottom: "28px" }}>
-        Be yourself, follow your heart! In yogic sense, the phrase “be yourself
-        – follow your heart” has a deeper meaning.
-      </p>
-
-      <p style={{ fontSize: "18px", lineHeight: 1.5 }}>
-        📍 Ayurveda consultant | Panchkarma specialist Ahmedabad -
-        Satellite/Naranpura
-      </p>
-
-      <p style={{ fontSize: "18px", lineHeight: 1.5 }}>
-        📱 Phone: (+91) 84870 79480
-      </p>
-    </div>
-
-    <div>
-      <h3 style={footerHeadingStyle}>RECENT POSTS</h3>
-    </div>
-
-    <div>
-      <h3 style={footerHeadingStyle}>OUR STORES</h3>
-      <FooterLink text="Satellite" />
-      <FooterLink text="Naranpura" />
-    </div>
-
-    <div>
-      <h3 style={footerHeadingStyle}>USEFUL LINKS</h3>
-      <FooterLink text="Privacy Policy" />
-      <FooterLink text="Returns" />
-      <FooterLink text="Terms & Conditions" />
-      <FooterLink text="Contact Us" />
-    </div>
-
-    <div>
-      <h3 style={footerHeadingStyle}>FOOTER MENU</h3>
-      <FooterLink text="Instagram profile" />
-      <FooterLink text="Shop" />
-      <FooterLink text="Contact Us" />
-      <FooterLink text="Blog" />
-    </div>
-  </div>
-</footer>
+      {/* FOOTER */}
+      <Footer />
     </main>
   );
 }
