@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import FloatingActions from "@/app/components/FloatingActions";
 import Footer from "@/app/components/Footer";
 import { slugify } from "@/lib/normalize";
+import { getOptimizedMediaUrl } from "@/lib/media";
 
 type Product = {
   _id: string;
@@ -60,6 +61,80 @@ export default function ProductDetailPage() {
   const [reviewFile, setReviewFile] = useState<File | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
 
+  async function submitProductReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!product) return;
+
+    if (reviewType === "text" && (!newReviewName.trim() || !newReviewText.trim())) {
+      alert("Please fill in both name and review text.");
+      return;
+    }
+
+    if (reviewType !== "text" && !reviewFile) {
+      alert("Please upload a file.");
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      let mediaUrl = "";
+      if (reviewType !== "text" && reviewFile) {
+        const formData = new FormData();
+        formData.append("file", reviewFile);
+
+        const uploadRes = await fetch("/api/user/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok || uploadData.error) {
+          alert(uploadData.error || "Failed to upload file");
+          return;
+        }
+        mediaUrl = uploadData.url;
+      }
+
+      const res = await fetch("/api/user/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: newReviewName,
+          review: newReviewText,
+          product: product.name,
+          type: reviewType,
+          mediaUrl,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to submit review");
+        return;
+      }
+
+      setNewReviewName("");
+      setNewReviewText("");
+      setReviewFile(null);
+      setReviewType("text");
+      setShowReviewForm(false);
+      alert("Thank you! Your review has been submitted.");
+
+      const reviewRes = await fetch(
+        `/api/user/reviews?product=${encodeURIComponent(product.name)}`
+      );
+      const reviewData = await reviewRes.json();
+      setReviews(reviewData.reviews || []);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit review.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
+
   async function addToCart() {
     if (!product) return;
 
@@ -88,7 +163,7 @@ export default function ProductDetailPage() {
               size: selectedSize,
             })
           );
-          window.location.href = "/account?next=/cart";
+          window.location.href = `/account?next=/product/${productSlug}`;
           return;
         }
 
@@ -98,7 +173,6 @@ export default function ProductDetailPage() {
 
       window.dispatchEvent(new Event("cartUpdated"));
 
-      // Trigger left-side Cart Drawer popup with item info
       const activePhoto = product.photos?.[0] || "";
       const currentPrice = pricing.discountedPrice || pricing.price;
 
@@ -646,9 +720,470 @@ export default function ProductDetailPage() {
             </div>
           </section>
         )}
+
+        {/* REVIEWS SECTION */}
+        <section
+          style={{
+            marginTop: 58,
+            backgroundColor: "#3A5A40",
+            color: "#fff",
+            borderRadius: "clamp(30px, 5vw, 52px)",
+            padding: "clamp(24px, 5vw, 48px)",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              color: "rgba(255,255,255,0.55)",
+              fontWeight: 900,
+            }}
+          >
+            Reviews
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+              margin: "8px 0 28px",
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "clamp(44px, 8vw, 96px)",
+                lineHeight: 0.88,
+                letterSpacing: "-0.08em",
+              }}
+            >
+              what people say
+            </h2>
+            <button
+              onClick={() => setShowReviewForm(!showReviewForm)}
+              style={{
+                backgroundColor: "#FFE5D4",
+                color: "#2F3E2F",
+                border: "none",
+                borderRadius: "20px",
+                padding: "10px 20px",
+                fontSize: "14px",
+                fontWeight: 900,
+                cursor: "pointer",
+                boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+              }}
+            >
+              {showReviewForm ? "Cancel Review" : "Write a Review"}
+            </button>
+          </div>
+
+          {showReviewForm && (
+            <form
+              onSubmit={submitProductReview}
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                borderRadius: "24px",
+                padding: "24px",
+                marginBottom: "32px",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              <h3 style={{ margin: "0 0 16px", color: "#FFE5D4", fontSize: "20px", fontWeight: 700 }}>
+                Share Your Experience
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>
+                    Review Type
+                  </label>
+                  <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
+                    {(["text", "image", "video"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          setReviewType(t);
+                          setReviewFile(null);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: "10px",
+                          borderRadius: "10px",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          backgroundColor: reviewType === t ? "#FFE5D4" : "rgba(255,255,255,0.05)",
+                          color: reviewType === t ? "#2F3E2F" : "#FFF",
+                          fontWeight: 900,
+                          fontSize: "13px",
+                          textTransform: "capitalize",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {reviewType !== "text" && (
+                  <div>
+                    <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>
+                      Upload {reviewType === "image" ? "Image" : "Video"}
+                    </label>
+                    <input
+                      type="file"
+                      accept={reviewType === "image" ? "image/*" : "video/*"}
+                      onChange={(e) => {
+                        if (e.target.files) setReviewFile(e.target.files[0]);
+                      }}
+                      required
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        borderRadius: "12px",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                        color: "#FFF",
+                        fontSize: "14px",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>
+                    Your Name {reviewType !== "text" && "(Optional)"}
+                  </label>
+                  <input
+                    type="text"
+                    value={newReviewName}
+                    onChange={(e) => setNewReviewName(e.target.value)}
+                    placeholder="Enter your name"
+                    required={reviewType === "text"}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      borderRadius: "12px",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      color: "#FFF",
+                      fontSize: "14px",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", color: "rgba(255,255,255,0.7)" }}>
+                    Review Text {reviewType !== "text" && "(Optional)"}
+                  </label>
+                  <textarea
+                    value={newReviewText}
+                    onChange={(e) => setNewReviewText(e.target.value)}
+                    placeholder={
+                      reviewType === "text"
+                        ? "Tell us what you think of this product"
+                        : "Add a caption/comment for your review (optional)"
+                    }
+                    required={reviewType === "text"}
+                    rows={4}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      borderRadius: "12px",
+                      border: "1px solid rgba(255,255,255,0.2)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      color: "#FFF",
+                      fontSize: "14px",
+                      resize: "vertical",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  style={{
+                    alignSelf: "flex-start",
+                    backgroundColor: "#FFE5D4",
+                    color: "#2F3E2F",
+                    border: "none",
+                    borderRadius: "16px",
+                    padding: "12px 24px",
+                    fontWeight: 900,
+                    fontSize: "14px",
+                    cursor: submittingReview ? "not-allowed" : "pointer",
+                    opacity: submittingReview ? 0.7 : 1,
+                    transition: "opacity 0.2s",
+                  }}
+                >
+                  {submittingReview ? "Submitting..." : "Submit Review"}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {reviews.length === 0 ? (
+            <p style={{ color: "rgba(255,255,255,0.65)" }}>
+              No reviews yet for this product.
+            </p>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                gap: 18,
+                overflowX: "auto",
+                paddingBottom: 8,
+              }}
+            >
+              {reviews.map((review) => {
+                const mediaUrl =
+                  (review.type === "image" || review.type === "video") && review.mediaUrl
+                    ? getOptimizedMediaUrl(review.mediaUrl, review.type)
+                    : "";
+
+                return (
+                  <article
+                    key={review._id}
+                    style={{
+                      minWidth: 300,
+                      maxWidth: 360,
+                      backgroundColor: "#F7EFE7",
+                      color: "#111",
+                      borderRadius: 32,
+                      padding: 18,
+                    }}
+                  >
+                    {review.type === "image" && mediaUrl && (
+                      <img
+                        src={mediaUrl}
+                        alt="Review"
+                        style={reviewMediaStyle}
+                      />
+                    )}
+
+                    {review.type === "video" && mediaUrl && (
+                      <video
+                        src={review.mediaUrl}
+                        controls
+                        muted
+                        playsInline
+                        style={reviewMediaStyle}
+                      />
+                    )}
+
+                    <strong>{review.name || "Customer"}</strong>
+
+                    {review.review && (
+                      <p
+                        style={{
+                          color: "#444",
+                          lineHeight: 1.55,
+                          marginBottom: 0,
+                        }}
+                      >
+                        {review.review}
+                      </p>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* SUGGESTED PRODUCTS SECTION */}
+        {suggestedProducts.length > 0 && (
+          <section
+            style={{
+              marginTop: 64,
+              paddingBottom: 80,
+            }}
+          >
+            <p
+              style={{
+                margin: "0 0 10px",
+                color: "#6B705C",
+                fontWeight: 900,
+              }}
+            >
+              Suggested Products
+            </p>
+
+            <h2
+              style={{
+                margin: "0 0 28px",
+                fontSize: "clamp(48px, 8vw, 92px)",
+                lineHeight: 0.9,
+                letterSpacing: "-0.08em",
+                color: "#111",
+              }}
+            >
+              you may also like
+            </h2>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: 22,
+              }}
+            >
+              {suggestedProducts.map((item) => {
+                const sizeObj = item.sizes && item.sizes.length > 0 ? item.sizes[0] : null;
+                const price = sizeObj && sizeObj.price !== undefined ? sizeObj.price : (item.price || 0);
+
+                let discountedPrice = price;
+                if (sizeObj) {
+                  if (sizeObj.discountedPrice !== undefined) {
+                    discountedPrice = sizeObj.discountedPrice;
+                  } else if (item.discountPercentage) {
+                    discountedPrice = price - (price * item.discountPercentage) / 100;
+                  }
+                } else {
+                  if (item.discountedPrice !== undefined && item.discountedPrice > 0) {
+                    discountedPrice = item.discountedPrice;
+                  } else if (item.discountPercentage) {
+                    discountedPrice = price - (price * item.discountPercentage) / 100;
+                  }
+                }
+
+                const discountAmount = price > discountedPrice ? Math.round(price - discountedPrice) : 0;
+                const itemSlug = item.slug || slugify(item.name || "");
+
+                return (
+                  <Link
+                    key={item._id}
+                    href={`/product/${itemSlug}`}
+                    style={{
+                      textDecoration: "none",
+                      color: "inherit",
+                    }}
+                  >
+                    <article
+                      style={{
+                        backgroundColor: "#FFFFFF",
+                        borderRadius: 34,
+                        overflow: "hidden",
+                        boxShadow: "0 18px 45px rgba(0,0,0,0.08)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: 280,
+                          backgroundColor: "#EFE7DD",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {item.photos?.[0] ? (
+                          <img
+                            src={item.photos[0]}
+                            alt={item.name}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              display: "grid",
+                              placeItems: "center",
+                              color: "#6B705C",
+                              fontWeight: 900,
+                            }}
+                          >
+                            No Image
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ padding: 22 }}>
+                        <p
+                          style={{
+                            margin: "0 0 8px",
+                            color: "#6B705C",
+                            fontWeight: 900,
+                          }}
+                        >
+                          {item.category || "Product"}
+                        </p>
+
+                        <h3
+                          style={{
+                            margin: "0 0 12px",
+                            fontSize: 32,
+                            lineHeight: 0.95,
+                            letterSpacing: "-0.06em",
+                          }}
+                        >
+                          {item.name}
+                        </h3>
+
+                        {discountAmount > 0 ? (
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                            <span
+                              style={{
+                                color: "#6B705C",
+                                textDecoration: "line-through",
+                                fontSize: 18,
+                              }}
+                            >
+                              ₹{price}
+                            </span>
+                            <strong style={{ fontSize: 26 }}>
+                              ₹{Math.round(discountedPrice)}
+                            </strong>
+                            <span
+                              style={{
+                                color: "#3A5A40",
+                                fontWeight: 900,
+                                fontSize: 13,
+                              }}
+                            >
+                              Save ₹{discountAmount}
+                            </span>
+                          </div>
+                        ) : (
+                          <strong style={{ fontSize: 26 }}>
+                            ₹{price}
+                          </strong>
+                        )}
+                      </div>
+                    </article>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
 
       <Footer />
+
+      <style jsx>{`
+        @media (max-width: 900px) {
+          .product-main-grid {
+            grid-template-columns: 1fr !important;
+          }
+
+          .product-info-card {
+            position: relative !important;
+            top: auto !important;
+          }
+
+          .product-split-section {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }
@@ -658,51 +1193,60 @@ const centerPageStyle: React.CSSProperties = {
   display: "grid",
   placeItems: "center",
   backgroundColor: "#F7EFE7",
+  color: "#111",
   fontFamily: "Arial, sans-serif",
 };
 
 const splitSectionStyle: React.CSSProperties = {
-  marginTop: 54,
-  backgroundColor: "#FFFFFF",
-  borderRadius: 36,
-  padding: "42px",
+  marginTop: 58,
+  backgroundColor: "#111",
+  color: "#fff",
+  borderRadius: "clamp(30px, 5vw, 52px)",
+  padding: "clamp(24px, 5vw, 48px)",
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-  gap: 32,
-  boxShadow: "0 18px 45px rgba(0,0,0,0.06)",
+  gridTemplateColumns: "0.8fr 1.2fr",
+  gap: 28,
+  alignItems: "start",
 };
 
 const sectionKickerStyle: React.CSSProperties = {
   margin: 0,
   color: "#6B705C",
   fontWeight: 900,
-  textTransform: "uppercase",
-  fontSize: 13,
-  letterSpacing: "0.08em",
 };
 
 const sectionTitleStyle: React.CSSProperties = {
   margin: "8px 0 0",
-  fontSize: "clamp(32px, 5vw, 54px)",
-  lineHeight: 0.95,
-  letterSpacing: "-0.06em",
+  fontSize: "clamp(38px, 7vw, 82px)",
+  lineHeight: 0.9,
+  letterSpacing: "-0.08em",
 };
 
 const sectionBodyStyle: React.CSSProperties = {
   margin: 0,
-  color: "#555",
+  color: "rgba(255,255,255,0.72)",
   fontSize: 18,
-  lineHeight: 1.6,
+  lineHeight: 1.7,
 };
 
 const qtyButtonStyle: React.CSSProperties = {
-  width: 32,
-  height: 32,
+  width: 34,
+  height: 34,
   borderRadius: 999,
   border: "none",
-  backgroundColor: "#F0F0F0",
-  color: "#111",
+  backgroundColor: "#111",
+  color: "#fff",
   cursor: "pointer",
   fontWeight: 900,
   fontSize: 18,
+};
+
+const reviewMediaStyle: React.CSSProperties = {
+  width: "100%",
+  height: "auto",
+  aspectRatio: "9 / 16",
+  objectFit: "contain",
+  backgroundColor: "rgba(0, 0, 0, 0.04)",
+  borderRadius: 24,
+  marginBottom: 14,
 };
