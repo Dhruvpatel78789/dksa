@@ -3,8 +3,8 @@ import FloatingActions from "../components/FloatingActions";
 import Footer from "../components/Footer";
 
 export const metadata: Metadata = {
-  title: "Returns & Refund Policy | Shashwat Ayurvedam",
-  description: "Learn about Returns, Replacements, and Refund Policy at Shashwat Ayurvedam. We ensure high quality and customer satisfaction.",
+  title: "Return & Cancellation Policy | Shashwat Ayurvedam",
+  description: "Learn about the Return Policy and Cancellation Policy at Shashwat Ayurvedam.",
   alternates: {
     canonical: "https://shashwatayurvedam.com/refund-policy",
   },
@@ -14,45 +14,43 @@ export default function RefundPolicyPage() {
   return (
     <main style={{ backgroundColor: "#F7EFE7", minHeight: "100vh", fontFamily: "Arial, sans-serif", color: "#111" }}>
       <FloatingActions />
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "120px 24px 60px" }}>
+      <div style={{ maxWidth: "960px", margin: "0 auto", padding: "120px 24px 60px" }}>
         <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 900, marginBottom: "24px", letterSpacing: "-0.05em" }}>
-          Returns & Refund Policy
+          Return & Cancellation Policy
         </h1>
-        <p style={{ color: "#666", fontSize: "14px", marginBottom: "40px" }}>Last updated: September 2026</p>
 
-        <section style={{ display: "grid", gap: "28px", lineHeight: 1.7, fontSize: "16px", color: "#333" }}>
+        <section style={{ display: "grid", gap: "32px", lineHeight: 1.7, fontSize: "16px", color: "#333" }}>
           <div>
-            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#2F3E2F", marginBottom: "10px" }}>1. Overview</h2>
+            <h2 style={{ fontSize: "24px", fontWeight: 900, color: "#2F3E2F", marginBottom: "12px" }}>
+              Return Policy
+            </h2>
             <p>
-              Thank you for shopping at Shashwat Ayurvedam. We take immense pride in the authentic quality of our Ayurvedic products.
-              If you are not entirely satisfied with your purchase, we are here to help.
+              At Shashwat Ayurvedam, we are determined to provide you a hassle free and enjoyable shopping experience. As Ayurvedic products are nature derived, we request you to be patient and give at least 1-2 months time for the products to give you the desired effects.
+            </p>
+            <p style={{ marginTop: "12px" }}>
+              We do not offer reverse pick-up: we will simply send a replacement. In the unlikely event that you receive damaged or defective items, all you have to do is contact our customer care number or email us at{" "}
+              <a href="mailto:mihirayurved79@gmail.com" style={{ color: "#3A5A40", fontWeight: 800, textDecoration: "underline" }}>
+                mihirayurved79@gmail.com
+              </a>.
             </p>
           </div>
 
-          <div>
-            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#2F3E2F", marginBottom: "10px" }}>2. Return Eligibility</h2>
+          <div style={{ backgroundColor: "#FFFFFF", padding: "28px", borderRadius: "24px", boxShadow: "0 8px 25px rgba(0,0,0,0.05)" }}>
+            <h2 style={{ fontSize: "24px", fontWeight: 900, color: "#2F3E2F", marginBottom: "12px" }}>
+              Cancellation Policy
+            </h2>
             <p>
-              To be eligible for a return or exchange:
+              Customers will have an option to cancel their orders through the dashboard when they login into their profile.
             </p>
-            <ul style={{ paddingLeft: "20px", marginTop: "10px" }}>
-              <li>Your item must be unused, sealed, and in the same condition that you received it.</li>
-              <li>The item must be in its original packaging with all security seals intact.</li>
-              <li>Returns must be requested within 7 days from the date of order delivery.</li>
-            </ul>
-          </div>
-
-          <div>
-            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#2F3E2F", marginBottom: "10px" }}>3. Damaged or Defective Items</h2>
-            <p>
-              If you receive a damaged, spilled, or defective product, please notify us immediately within 48 hours of delivery along with photos or unboxing video at (+91) 84870 79480. We will dispatch a replacement product free of cost.
+            <p style={{ marginTop: "12px" }}>
+              Customer needs to initiate the order Cancellation within the next business day after the Payment. In case the order has already been shipped, they need to approach the customer care through email directly at{" "}
+              <a href="mailto:mihirayurved79@gmail.com" style={{ color: "#3A5A40", fontWeight: 800, textDecoration: "underline" }}>
+                mihirayurved79@gmail.com
+              </a>{" "}
+              and get the order cancelled with Refund.
             </p>
-          </div>
-
-          <div>
-            <h2 style={{ fontSize: "22px", fontWeight: 800, color: "#2F3E2F", marginBottom: "10px" }}>4. Refund Process</h2>
-            <p>
-              Once your return is received and inspected, we will send you an email/SMS notification regarding the approval or rejection of your refund.
-              Approved refunds will be processed to your original method of payment within 5-7 business days.
+            <p style={{ marginTop: "12px", fontWeight: 700, color: "#2F3E2F" }}>
+              Note: Product should not be opened/used and should be in a Marketable Condition.
             </p>
           </div>
         </section>

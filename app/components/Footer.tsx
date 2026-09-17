@@ -50,21 +50,25 @@ export default function Footer() {
           </p>
 
           <p style={{ fontSize: "15px", lineHeight: 1.5, margin: "6px 0" }}>
-            📍 Ayurveda consultant | Panchkarma specialist Ahmedabad - Satellite/Naranpura
+            📍 FF1, Palak 2, Above SBI, Anand Nagar – Ramdevnagar Road, Satellite, Ahmedabad – 380015
           </p>
 
           <p style={{ fontSize: "15px", lineHeight: 1.5, margin: "6px 0" }}>
             📱 Phone: (+91) 84870 79480
           </p>
+
+          <p style={{ fontSize: "15px", lineHeight: 1.5, margin: "6px 0" }}>
+            ✉️ Email: mihirayurved79@gmail.com
+          </p>
         </div>
 
         <div>
-          <h3 style={footerHeadingStyle}>OUR STORES</h3>
+          <h3 style={footerHeadingStyle}>OUR STORE</h3>
           <p style={{ margin: "0 0 14px", color: "#555555", fontSize: "16px" }}>
             Satellite Branch, Ahmedabad
           </p>
-          <p style={{ margin: "0 0 14px", color: "#555555", fontSize: "16px" }}>
-            Naranpura Branch, Ahmedabad
+          <p style={{ margin: "0", color: "#777777", fontSize: "14px" }}>
+            FF1, Palak 2, Above SBI, Anand Nagar Road
           </p>
         </div>
 
@@ -104,7 +108,7 @@ export default function Footer() {
             </li>
             <li>
               <Link href="/contact-us" style={{ color: "#7A7A7A", textDecoration: "none", fontSize: "16px" }}>
-                Store Locations
+                Store Location
               </Link>
             </li>
             <li>
