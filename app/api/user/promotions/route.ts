@@ -1,21 +1,30 @@
 import clientPromise from "@/lib/mongodb";
+import { cacheLife, cacheTag } from "next/cache";
+
+async function getCachedPromotions() {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("promotions");
+
+  const client = await clientPromise;
+  const db = client.db("medtech");
+
+  return await db
+    .collection("products")
+    .find({ isPromoted: true })
+    .sort({ updatedAt: -1 })
+    .project({
+      name: 1,
+      photos: 1,
+      promoDescription: 1,
+      promoRating: 1,
+    })
+    .toArray();
+}
 
 export async function GET() {
   try {
-    const client = await clientPromise;
-    const db = client.db("medtech");
-
-    const products = await db
-      .collection("products")
-      .find({ isPromoted: true })
-      .sort({ updatedAt: -1 })
-      .project({
-        name: 1,
-        photos: 1,
-        promoDescription: 1,
-        promoRating: 1,
-      })
-      .toArray();
+    const products = await getCachedPromotions();
 
     return Response.json({
       promotions: products.map((product) => ({

@@ -166,6 +166,10 @@ if (decoded.role !== "admin") {
       updatedAt: new Date(),
     });
 
+    const { updateTag } = await import("next/cache");
+    updateTag("products");
+    updateTag("promotions");
+
     return Response.json({
       message: "Product added successfully",
       productId: result.insertedId.toString(),

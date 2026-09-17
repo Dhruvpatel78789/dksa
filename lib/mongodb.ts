@@ -6,7 +6,12 @@ if (!uri) {
   throw new Error("Missing MONGODB_URI in .env.local");
 }
 
-const options = {};
+const options = {
+  maxPoolSize: 10,
+  minPoolSize: 2,
+  maxIdleTimeMS: 30000,
+  serverSelectionTimeoutMS: 5000,
+};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;

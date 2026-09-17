@@ -160,6 +160,10 @@ export async function PATCH(request: Request, { params }: Params) {
       return Response.json({ error: "Product not found" }, { status: 404 });
     }
 
+    const { updateTag } = await import("next/cache");
+    updateTag("products");
+    updateTag("promotions");
+
     return Response.json({
       message: "Product updated successfully",
     });
@@ -191,6 +195,10 @@ export async function DELETE(request: Request, { params }: Params) {
     if (result.deletedCount === 0) {
       return Response.json({ error: "Product not found" }, { status: 404 });
     }
+
+    const { updateTag } = await import("next/cache");
+    updateTag("products");
+    updateTag("promotions");
 
     return Response.json({
       message: "Product deleted successfully",

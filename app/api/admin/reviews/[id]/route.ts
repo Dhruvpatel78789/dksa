@@ -38,6 +38,9 @@ export async function DELETE(request: Request, { params }: Params) {
       return Response.json({ error: "Review not found" }, { status: 404 });
     }
 
+    const { updateTag } = await import("next/cache");
+    updateTag("reviews");
+
     return Response.json({ message: "Review deleted successfully" });
   } catch (error) {
     console.error("DELETE REVIEW ERROR:", error);
@@ -77,6 +80,9 @@ export async function PATCH(request: Request, { params }: Params) {
     if (result.matchedCount === 0) {
       return Response.json({ error: "Review not found" }, { status: 404 });
     }
+
+    const { updateTag } = await import("next/cache");
+    updateTag("reviews");
 
     return Response.json({ message: "Review updated successfully" });
   } catch (error) {

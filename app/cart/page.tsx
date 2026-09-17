@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FloatingActions from "../components/FloatingActions";
@@ -219,9 +220,11 @@ async function removeItem(
   alignItems: "center",
 }}
                   >
-                    <img
-                      src={item.photo || ""}
+                    <Image
+                      src={item.photo || "/logo.png"}
                       alt={item.name}
+                      width={90}
+                      height={120}
                       style={{
                         width: 90,
                         height: 120,
@@ -405,11 +408,8 @@ async function removeItem(
             <strong>₹{Math.round(total)}</strong>
           </div>
 
-          <button
-            onClick={() => {
-              window.location.href = "/checkout";
-            }}
-            disabled={cart.length === 0}
+          <Link
+            href="/checkout"
             style={{
               width: "100%",
               border: "none",
@@ -420,10 +420,14 @@ async function removeItem(
               fontWeight: 900,
               cursor: cart.length === 0 ? "not-allowed" : "pointer",
               opacity: cart.length === 0 ? 0.5 : 1,
+              textAlign: "center",
+              textDecoration: "none",
+              display: "block",
+              pointerEvents: cart.length === 0 ? "none" : "auto",
             }}
           >
             Proceed To Checkout
-          </button>
+          </Link>
         </aside>
       </section>
 

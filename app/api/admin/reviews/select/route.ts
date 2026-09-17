@@ -46,6 +46,9 @@ if (decoded.role !== "admin") {
       { $set: { isSelectedForHome: true } }
     );
 
+    const { updateTag } = await import("next/cache");
+    updateTag("reviews");
+
     return Response.json({ message: "Updated successfully" });
   } catch (error) {
     console.error("SELECT REVIEWS ERROR:", error);

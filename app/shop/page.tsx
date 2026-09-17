@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import FloatingActions from "../components/FloatingActions";
@@ -191,15 +192,16 @@ export default function ShopPage() {
                         borderRadius: 26,
                         overflow: "hidden",
                         backgroundColor: "#DDD6CA",
+                        position: "relative",
                       }}
                     >
                       {image && (
-                        <img
+                        <Image
                           src={image}
                           alt={product.name}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 33vw"
                           style={{
-                            width: "100%",
-                            height: "100%",
                             objectFit: "cover",
                           }}
                         />

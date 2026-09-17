@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 
@@ -33,9 +34,11 @@ export default function Footer() {
       >
         <div>
           <Link href="/">
-            <img
+            <Image
               src="/logo.png"
               alt="Shashwat Ayurvedam Logo"
+              width={90}
+              height={90}
               style={{
                 width: "90px",
                 height: "auto",
@@ -136,7 +139,7 @@ export default function Footer() {
           color: "#999999",
         }}
       >
-        © {new Date().getFullYear()} Shashwat Ayurvedam. All rights reserved.
+        © 2026 Shashwat Ayurvedam. All rights reserved.
       </div>
     </footer>
   );

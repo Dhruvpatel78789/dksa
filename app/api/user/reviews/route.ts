@@ -1,36 +1,63 @@
 import clientPromise from "@/lib/mongodb";
+import { cacheLife, cacheTag } from "next/cache";
+
+async function getCachedHomeReviews() {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("reviews");
+
+  const client = await clientPromise;
+  const db = client.db("medtech");
+
+  return await db
+    .collection("reviews")
+    .find({ isSelectedForHome: true })
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .project({
+      name: 1,
+      review: 1,
+      type: 1,
+      mediaUrl: 1,
+      product: 1,
+      createdAt: 1,
+    })
+    .toArray();
+}
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const product = searchParams.get("product");
 
-    const client = await clientPromise;
-    const db = client.db("medtech");
+    let reviews;
 
-    const query = product
-      ? {
+    if (product) {
+      const client = await clientPromise;
+      const db = client.db("medtech");
+      
+      reviews = await db
+        .collection("reviews")
+        .find({
           product: {
             $regex: `^${product}$`,
             $options: "i",
           },
-        }
-      : { isSelectedForHome: true };
-
-    const reviews = await db
-      .collection("reviews")
-      .find(query)
-      .sort({ createdAt: -1 })
-      .limit(product ? 30 : 10)
-      .project({
-        name: 1,
-        review: 1,
-        type: 1,
-        mediaUrl: 1,
-        product: 1,
-        createdAt: 1,
-      })
-      .toArray();
+        })
+        .sort({ createdAt: -1 })
+        .limit(30)
+        .project({
+          name: 1,
+          review: 1,
+          type: 1,
+          mediaUrl: 1,
+          product: 1,
+          createdAt: 1,
+        })
+        .toArray();
+    } else {
+      reviews = await getCachedHomeReviews();
+    }
 
     return Response.json({
       reviews: reviews.map((review) => ({

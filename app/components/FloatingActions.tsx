@@ -36,12 +36,17 @@ export default function FloatingActions() {
   useEffect(() => {
     refreshState();
 
-    window.addEventListener("cartUpdated", refreshState);
-    window.addEventListener("focus", refreshState);
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    function debouncedRefresh() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(refreshState, 300);
+    }
+
+    window.addEventListener("cartUpdated", debouncedRefresh);
 
     return () => {
-      window.removeEventListener("cartUpdated", refreshState);
-      window.removeEventListener("focus", refreshState);
+      window.removeEventListener("cartUpdated", debouncedRefresh);
+      clearTimeout(debounceTimer);
     };
   }, []);
 

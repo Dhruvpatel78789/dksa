@@ -72,6 +72,9 @@ if (decoded.role !== "admin") {
       createdAt: new Date(),
     });
 
+    const { updateTag } = await import("next/cache");
+    updateTag("reviews");
+
     return Response.json({ message: "Review added successfully" });
   } catch (error) {
     console.error("ADMIN POST REVIEW ERROR:", error);
