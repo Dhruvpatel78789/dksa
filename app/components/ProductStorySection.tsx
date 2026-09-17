@@ -7,7 +7,7 @@ const products = [
   {
     slug: "root-revival-oil",
     name: "Root Revival Oil",
-    image: "/products/product-1.png",
+    image: "/products/product-1.webp",
     description:
       "A lightweight daily oil designed to support healthier-looking roots and reduce visible hair stress.",
     benefits: [
@@ -21,7 +21,7 @@ const products = [
   {
     slug: "scalp-balance-cleanser",
     name: "Anti Aging & Rejuvenating (21 bhavna yukta) Scalp Balance Cleanser",
-    image: "/products/product-2.png",
+    image: "/products/product-2.webp",
     description:
       "A gentle scalp-first cleanser crafted to refresh buildup, calm dryness, and support a cleaner scalp environment.",
     benefits: [
@@ -36,7 +36,7 @@ const products = [
   {
     slug: "strength-repair-mask",
     name: "Strength Repair Mask",
-    image: "/products/product-3.png",
+    image: "/products/product-3.webp",
     description:
       "A rich conditioning mask made for dull, weak, and tired-looking hair that needs softness and visible shine.",
     benefits: [
