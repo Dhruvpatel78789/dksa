@@ -50,9 +50,17 @@ export async function POST(request: Request) {
     if (bulkOps.length > 0) {
       await db.collection("products").bulkWrite(bulkOps);
       
-      const { updateTag } = await import("next/cache");
-      updateTag("products");
-      updateTag("promotions");
+      try {
+        const { revalidateTag, revalidatePath } = await import("next/cache");
+        revalidateTag("products", { expire: 0 });
+        revalidateTag("promotions", { expire: 0 });
+        revalidatePath("/api/user/products");
+        revalidatePath("/api/user/promotions");
+        revalidatePath("/shop");
+        revalidatePath("/");
+      } catch (e) {
+        console.warn("Revalidation warning:", e);
+      }
     }
 
     return Response.json({ message: "Bulk promotion updated successfully" });

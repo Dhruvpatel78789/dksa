@@ -38,8 +38,12 @@ export async function DELETE(request: Request, { params }: Params) {
       return Response.json({ error: "Review not found" }, { status: 404 });
     }
 
-    const { updateTag } = await import("next/cache");
-    updateTag("reviews");
+    try {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("reviews", "max");
+    } catch (e) {
+      console.warn("Revalidation warning:", e);
+    }
 
     return Response.json({ message: "Review deleted successfully" });
   } catch (error) {
@@ -81,8 +85,12 @@ export async function PATCH(request: Request, { params }: Params) {
       return Response.json({ error: "Review not found" }, { status: 404 });
     }
 
-    const { updateTag } = await import("next/cache");
-    updateTag("reviews");
+    try {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("reviews", "max");
+    } catch (e) {
+      console.warn("Revalidation warning:", e);
+    }
 
     return Response.json({ message: "Review updated successfully" });
   } catch (error) {

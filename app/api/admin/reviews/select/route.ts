@@ -46,8 +46,12 @@ if (decoded.role !== "admin") {
       { $set: { isSelectedForHome: true } }
     );
 
-    const { updateTag } = await import("next/cache");
-    updateTag("reviews");
+    try {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("reviews", "max");
+    } catch (e) {
+      console.warn("Revalidation warning:", e);
+    }
 
     return Response.json({ message: "Updated successfully" });
   } catch (error) {

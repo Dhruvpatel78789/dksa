@@ -45,6 +45,18 @@ export async function GET(request: Request, { params }: Params) {
 
 export async function PATCH(request: Request, { params }: Params) {
   try {
+    const token = (await cookies()).get("token")?.value;
+
+    if (!token) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded: any = verifyToken(token);
+
+    if (decoded.role !== "admin") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const { id } = await params;
 
     if (!ObjectId.isValid(id)) {
@@ -77,12 +89,16 @@ export async function PATCH(request: Request, { params }: Params) {
 
     if (body.price !== undefined || body.discountedPrice !== undefined || body.sizes !== undefined) {
       const sizes = Array.isArray(body.sizes) ? body.sizes : [];
-      const cleanSizes = sizes.map((item: any) => ({
-        size: String(item.size || "").trim(),
-        qty: Number(item.qty || 0),
-        price: Number(item.price || 0),
-        discountedPrice: Number(item.discountedPrice || 0),
-      })).filter((item: any) => item.size);
+      const cleanSizes = sizes.map((item: any) => {
+        const p = Number(item.price || 0);
+        const dp = item.discountedPrice !== undefined && Number(item.discountedPrice) > 0 ? Number(item.discountedPrice) : p;
+        return {
+          size: String(item.size || "").trim(),
+          qty: Number(item.qty || 0),
+          price: p,
+          discountedPrice: dp,
+        };
+      }).filter((item: any) => item.size);
 
       if (cleanSizes.length > 0) {
         const hasInvalidSize = cleanSizes.some(
@@ -160,9 +176,17 @@ export async function PATCH(request: Request, { params }: Params) {
       return Response.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const { updateTag } = await import("next/cache");
-    updateTag("products");
-    updateTag("promotions");
+    try {
+      const { revalidateTag, revalidatePath } = await import("next/cache");
+      revalidateTag("products", { expire: 0 });
+      revalidateTag("promotions", { expire: 0 });
+      revalidatePath("/api/user/products");
+      revalidatePath("/api/user/promotions");
+      revalidatePath("/shop");
+      revalidatePath("/");
+    } catch (e) {
+      console.warn("Revalidation warning:", e);
+    }
 
     return Response.json({
       message: "Product updated successfully",
@@ -179,6 +203,18 @@ export async function PATCH(request: Request, { params }: Params) {
 
 export async function DELETE(request: Request, { params }: Params) {
   try {
+    const token = (await cookies()).get("token")?.value;
+
+    if (!token) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const decoded: any = verifyToken(token);
+
+    if (decoded.role !== "admin") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const { id } = await params;
 
     if (!ObjectId.isValid(id)) {
@@ -196,9 +232,17 @@ export async function DELETE(request: Request, { params }: Params) {
       return Response.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const { updateTag } = await import("next/cache");
-    updateTag("products");
-    updateTag("promotions");
+    try {
+      const { revalidateTag, revalidatePath } = await import("next/cache");
+      revalidateTag("products", { expire: 0 });
+      revalidateTag("promotions", { expire: 0 });
+      revalidatePath("/api/user/products");
+      revalidatePath("/api/user/promotions");
+      revalidatePath("/shop");
+      revalidatePath("/");
+    } catch (e) {
+      console.warn("Revalidation warning:", e);
+    }
 
     return Response.json({
       message: "Product deleted successfully",

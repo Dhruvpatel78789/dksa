@@ -166,9 +166,17 @@ if (decoded.role !== "admin") {
       updatedAt: new Date(),
     });
 
-    const { updateTag } = await import("next/cache");
-    updateTag("products");
-    updateTag("promotions");
+    try {
+      const { revalidateTag, revalidatePath } = await import("next/cache");
+      revalidateTag("products", { expire: 0 });
+      revalidateTag("promotions", { expire: 0 });
+      revalidatePath("/api/user/products");
+      revalidatePath("/api/user/promotions");
+      revalidatePath("/shop");
+      revalidatePath("/");
+    } catch (e) {
+      console.warn("Revalidation warning:", e);
+    }
 
     return Response.json({
       message: "Product added successfully",

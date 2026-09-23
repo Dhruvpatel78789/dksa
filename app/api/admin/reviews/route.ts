@@ -72,8 +72,12 @@ if (decoded.role !== "admin") {
       createdAt: new Date(),
     });
 
-    const { updateTag } = await import("next/cache");
-    updateTag("reviews");
+    try {
+      const { revalidateTag } = await import("next/cache");
+      revalidateTag("reviews", "max");
+    } catch (e) {
+      console.warn("Revalidation warning:", e);
+    }
 
     return Response.json({ message: "Review added successfully" });
   } catch (error) {

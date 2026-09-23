@@ -33,13 +33,20 @@ export async function GET() {
   try {
     const products = await getCachedProducts();
 
-    return Response.json({
-      products: products.map((product) => ({
-        ...product,
-        _id: product._id.toString(),
-        slug: product.slug || slugify(product.name || ""),
-      })),
-    });
+    return Response.json(
+      {
+        products: products.map((product) => ({
+          ...product,
+          _id: product._id.toString(),
+          slug: product.slug || slugify(product.name || ""),
+        })),
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        },
+      }
+    );
   } catch (error) {
     console.error("GET USER PRODUCTS ERROR:", error);
 
