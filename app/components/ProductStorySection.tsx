@@ -7,7 +7,7 @@ const products = [
   {
     slug: "root-revival-oil",
     name: "Root Revival Oil",
-    image: "/products/product-1.webp",
+    image: "/products/product1.webp",
     description:
       "A lightweight daily oil designed to support healthier-looking roots and reduce visible hair stress.",
     benefits: [

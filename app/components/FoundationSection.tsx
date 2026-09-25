@@ -52,7 +52,7 @@ export default function FoundationSection() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const frameProgress = clamp((foundationProgress - 0.82) / 0.18);
+  const frameProgress = clamp((foundationProgress - 0.70) / 0.30);
   const currentFrame = Math.min(
     FRAME_COUNT,
     Math.max(0, Math.floor(frameProgress * FRAME_COUNT))
@@ -150,7 +150,7 @@ export default function FoundationSection() {
       ref={foundationRef}
       style={{
         position: "relative",
-        height: "1200vh",
+        height: "400vh",
         backgroundColor: "#FFE5D4",
       }}
     >
@@ -174,9 +174,9 @@ export default function FoundationSection() {
             "slow growth",
           ];
 
-          const transitionProgress = clamp((foundationProgress - 0.45) / 0.18);
-          const solutionMoveUpProgress = clamp((foundationProgress - 0.67) / 0.12);
-          const videoSlideProgress = clamp((foundationProgress - 0.65) / 0.18);
+          const transitionProgress = clamp((foundationProgress - 0.35) / 0.18);
+          const solutionMoveUpProgress = clamp((foundationProgress - 0.58) / 0.12);
+          const videoSlideProgress = clamp((foundationProgress - 0.54) / 0.20);
 
           return (
             <>
@@ -187,6 +187,7 @@ export default function FoundationSection() {
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
+                  alignItems: "center",
                   zIndex: 35,
                   pointerEvents: "none",
                   transform: `translate3d(0, -${transitionProgress * 100}vh, 0)`,
@@ -195,7 +196,7 @@ export default function FoundationSection() {
                   width: "100%",
                 }}
               >
-                <div style={{ alignSelf: "center", textAlign: "center", marginBottom: "clamp(28px, 6vh, 60px)" }}>
+                <div style={{ alignSelf: "center", textAlign: "center", marginBottom: "clamp(20px, 4vh, 40px)" }}>
                   <p
                     style={{
                       margin: 0,
@@ -210,18 +211,23 @@ export default function FoundationSection() {
                   </p>
                 </div>
 
-                <div style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "clamp(12px, 3vh, 28px)",
-                  maxWidth: "1000px",
-                  width: "100%",
-                  alignSelf: "flex-start",
-                  textAlign: "left"
-                }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "12px 18px",
+                    maxWidth: "1100px",
+                    width: "100%",
+                    alignSelf: "center",
+                    textAlign: "center",
+                  }}
+                >
                   {problems.map((problem, i) => {
-                    const start = 0.05 + i * 0.055;
-                    const end = start + 0.055;
+                    const pairIndex = Math.floor(i / 2);
+                    const start = 0.05 + pairIndex * 0.08;
+                    const end = start + 0.08;
                     const itemProgress = clamp((foundationProgress - start) / (end - start));
 
                     return (
@@ -229,17 +235,17 @@ export default function FoundationSection() {
                         key={problem}
                         style={{
                           margin: 0,
-                          fontSize: "clamp(32px, 6.5vw, 92px)",
-                          lineHeight: 1.05,
-                          letterSpacing: "-0.05em",
+                          fontSize: "clamp(30px, 5.5vw, 76px)",
+                          lineHeight: 1.15,
+                          letterSpacing: "-0.04em",
                           fontWeight: 900,
                           color: "#2F3E2F",
                           opacity: 0.25 + itemProgress * 0.75,
-                          transform: `translate3d(${12 * (1 - itemProgress)}px, 0, 0)`,
-                          transition: "opacity 0.25s ease, transform 0.25s ease",
+                          transition: "opacity 0.2s ease",
+                          display: "inline",
                         }}
                       >
-                        {problem}
+                        {problem}{i < problems.length - 1 ? "," : ""}
                       </h1>
                     );
                   })}
@@ -248,8 +254,8 @@ export default function FoundationSection() {
 
               {(() => {
                 const solutionOpacity =
-                  clamp((foundationProgress - 0.44) / 0.08) *
-                  (1 - clamp((foundationProgress - 0.64) / 0.08));
+                  clamp((foundationProgress - 0.38) / 0.08) *
+                  (1 - clamp((foundationProgress - 0.60) / 0.08));
 
                 return (
                   <div
